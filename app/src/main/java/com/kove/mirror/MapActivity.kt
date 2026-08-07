@@ -99,6 +99,8 @@ class MapActivity : AppCompatActivity() {
     private var destinationMarker: Marker? = null
     private var navigationPolyline: Polyline? = null
     private var isNavigating = false
+    private var isRecalculatingRoute = false
+    private var lastRecalculateTimeMs = 0L
     private var currentNavigationRoute: NavigationHelper.NavigationRoute? = null
 
     // ─── GPX Track Recording ─────────────────────────────────────
@@ -238,6 +240,18 @@ class MapActivity : AppCompatActivity() {
         controller.setCenter(GeoPoint(savedLat, savedLon))
 
         applyMapTheme()
+
+        mapView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            update2dCameraPadding()
+        }
+        mapView.post { update2dCameraPadding() }
+    }
+
+    private fun update2dCameraPadding() {
+        val h = mapView.height
+        if (h > 0) {
+            mapView.setMapCenterOffset(0, (h * 0.25f).toInt())
+        }
     }
 
     // ─── 3D Map Setup (MapLibre GL Native) ─────────────────────
@@ -246,6 +260,7 @@ class MapActivity : AppCompatActivity() {
         mapView3d.getMapAsync { map ->
             maplibreMap = map
             map3d = Map3dOverlays(map, resources.displayMetrics.density)
+            update3dCameraPadding()
             refresh3dCursor()
             map3d?.setDestinationIcon(createDestinationPinBitmap())
             map.uiSettings.isCompassEnabled = false
@@ -253,6 +268,11 @@ class MapActivity : AppCompatActivity() {
             map.uiSettings.isTiltGesturesEnabled = true
             map.uiSettings.isRotateGesturesEnabled = true
             map.setMinZoomPreference(8.0)
+
+            mapView3d.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                update3dCameraPadding()
+            }
+            mapView3d.post { update3dCameraPadding() }
 
             // Disable 3D GPS auto-follow when the user drags/rotates the camera manually
             map.addOnCameraMoveStartedListener { reason ->
@@ -461,6 +481,7 @@ class MapActivity : AppCompatActivity() {
     private fun enter3dMode() {
         mapView.visibility = View.GONE
         mapView3d.visibility = View.VISIBLE
+        update3dCameraPadding()
         update3dDiag()
         if (!is3dStyleLoaded) {
             Toast.makeText(this, getString(R.string.map_3d_loading), Toast.LENGTH_SHORT).show()
@@ -468,6 +489,15 @@ class MapActivity : AppCompatActivity() {
         sync2dCameraTo3d()
         locationOverlay?.myLocation?.let {
             update3dLocationMarker(it.latitude, it.longitude)
+        }
+    }
+
+    private fun update3dCameraPadding() {
+        val map = maplibreMap ?: return
+        val h = mapView3d.height
+        if (h > 0) {
+            val topPadding = (h * 0.5f).toInt()
+            map.setPadding(0, topPadding, 0, 0)
         }
     }
 
@@ -638,6 +668,7 @@ class MapActivity : AppCompatActivity() {
 
     private fun stopNavigation() {
         isNavigating = false
+        isRecalculatingRoute = false
         currentNavigationRoute = null
         selectedDestination = null
 
@@ -668,6 +699,14 @@ class MapActivity : AppCompatActivity() {
             return
         }
 
+        // Automatic rerouting if off-route (> 50m)
+        val offRouteDist = NavigationHelper.distanceToPolylineMeters(currentLocation, route.geometryPoints)
+        val now = System.currentTimeMillis()
+        if (offRouteDist > 50.0 && !isRecalculatingRoute && (now - lastRecalculateTimeMs > 5000L)) {
+            recalculateRoute(currentLocation, dest)
+            return
+        }
+
         // Find nearest step in route
         val nextStep = route.steps.firstOrNull { step ->
             step.location.latitude != 0.0 && currentLocation.distanceToAsDouble(step.location) < 300.0
@@ -694,6 +733,53 @@ class MapActivity : AppCompatActivity() {
         val remKm = remainingDistMeters / 1000.0
         val remMin = (route.totalDurationSeconds / 60.0).toInt()
         tvTotalEta.text = getString(R.string.nav_rem_format, remKm, remMin)
+    }
+
+    private fun recalculateRoute(start: GeoPoint, dest: GeoPoint) {
+        isRecalculatingRoute = true
+        lastRecalculateTimeMs = System.currentTimeMillis()
+
+        val tvInstruction = findViewById<TextView>(R.id.tvTurnInstruction)
+        tvInstruction?.text = getString(R.string.nav_recalculating)
+
+        NavigationHelper.fetchRoute(
+            start = start,
+            destination = dest,
+            onSuccess = { newRoute ->
+                runOnUiThread {
+                    if (!isNavigating) {
+                        isRecalculatingRoute = false
+                        return@runOnUiThread
+                    }
+                    currentNavigationRoute = newRoute
+
+                    map3d?.setNavigationRoute(
+                        newRoute.geometryPoints.map { LatLng(it.latitude, it.longitude) }
+                    )
+
+                    navigationPolyline?.let { mapView.overlays.remove(it) }
+                    navigationPolyline = Polyline().apply {
+                        setPoints(newRoute.geometryPoints)
+                        outlinePaint.color = Color.parseColor("#2563EB")
+                        outlinePaint.strokeWidth = 7f * resources.displayMetrics.density
+                        outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                        outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                        outlinePaint.isAntiAlias = true
+                    }
+                    mapView.overlays.add(navigationPolyline)
+                    mapView.invalidate()
+
+                    isRecalculatingRoute = false
+                    updateNavigationUi(start)
+                }
+            },
+            onError = { error ->
+                runOnUiThread {
+                    isRecalculatingRoute = false
+                    DebugLogger.error("❌ Reroute error: $error")
+                }
+            }
+        )
     }
 
     // ─── Buttons Setup ──────────────────────────────────────────

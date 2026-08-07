@@ -158,4 +158,46 @@ object NavigationHelper {
     private fun String.capitalizeFirstLetter(): String {
         return if (isNotEmpty()) this[0].uppercaseChar() + substring(1) else this
     }
+
+    /**
+     * Calculates the minimum perpendicular distance in meters from a GeoPoint
+     * to a polyline represented as a list of GeoPoints.
+     */
+    fun distanceToPolylineMeters(point: GeoPoint, polyline: List<GeoPoint>): Double {
+        if (polyline.isEmpty()) return Double.MAX_VALUE
+        if (polyline.size == 1) return point.distanceToAsDouble(polyline[0])
+
+        var minDist = Double.MAX_VALUE
+        for (i in 0 until polyline.size - 1) {
+            val dist = distanceToSegmentMeters(point, polyline[i], polyline[i + 1])
+            if (dist < minDist) {
+                minDist = dist
+            }
+        }
+        return minDist
+    }
+
+    /**
+     * Calculates distance in meters from point P to line segment AB.
+     */
+    fun distanceToSegmentMeters(p: GeoPoint, a: GeoPoint, b: GeoPoint): Double {
+        val cosLat = Math.cos(Math.toRadians(a.latitude))
+        val bx = (b.longitude - a.longitude) * 111320.0 * cosLat
+        val by = (b.latitude - a.latitude) * 111320.0
+        val px = (p.longitude - a.longitude) * 111320.0 * cosLat
+        val py = (p.latitude - a.latitude) * 111320.0
+
+        val ab2 = bx * bx + by * by
+        if (ab2 == 0.0) {
+            return Math.hypot(px, py)
+        }
+
+        var t = (px * bx + py * by) / ab2
+        t = t.coerceIn(0.0, 1.0)
+
+        val projX = t * bx
+        val projY = t * by
+
+        return Math.hypot(px - projX, py - projY)
+    }
 }

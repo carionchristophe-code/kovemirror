@@ -229,6 +229,7 @@
     <string name="nav_destination_selected">📍 Hedef Seçildi</string>
     <string name="nav_arrived">🎉 Hedefe ulaştınız!</string>
     <string name="nav_calculating">Rota hesaplanıyor…</string>
+    <string name="nav_recalculating">Yeni rota hesaplanıyor…</string>
     <string name="nav_rem_format">Kalan: %1$.1f km (%2$d dk)</string>
 
     <!-- Uygulama Modu Seçimi -->
