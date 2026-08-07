@@ -169,6 +169,9 @@
     <string name="map_layer_topo">Topo</string>
     <string name="map_layer_sat">Satélite</string>
     <string name="map_layer_offline">Sin conexión</string>
+    <string name="map_layer_3d">3D</string>
+    <string name="map_3d_offline">⬇️ Sin conexión</string>
+    <string name="map_3d_loading">🌍 Cargando mapa 3D…</string>
     <string name="toast_select_offline_map">Por favor seleccione un archivo OpenAndroMaps (.map)</string>
     <string name="toast_offline_map_loaded">✅ Mapa sin conexión cargado: %1$s</string>
     <string name="error_invalid_map_file">❌ Archivo .map no válido o ilegible</string>
@@ -204,6 +207,8 @@
     <string name="label_cursor_shape">Forma del Cursor:</string>
     <string name="label_cursor_color">Color del Cursor:</string>
     <string name="label_cursor_preview">Vista Previa:</string>
+    <string name="label_recording_color">Color de Grabación de Ruta:</string>
+    <string name="btn_open_tft_padding">🖼️ Padding Settings</string>
     <string name="cursor_shape_arrow">⬆️ Flecha de Navegación</string>
     <string name="cursor_shape_motorcycle">🏍️ Motocicleta</string>
     <string name="cursor_shape_circle">🟢 Punto Circular</string>
@@ -229,6 +234,7 @@
     <string name="nav_destination_selected">📍 Destino Seleccionado</string>
     <string name="nav_arrived">🎉 ¡Has llegado a tu destino!</string>
     <string name="nav_calculating">Calculando ruta…</string>
+    <string name="nav_recalculating">Recalculando ruta…</string>
     <string name="nav_rem_format">Restante: %1$.1f km (%2$d min)</string>
 
     <!-- Selección de Modo -->
@@ -278,13 +284,14 @@
     <string name="toast_my_location">📍 Volver a mi ubicación</string>
 
     <!-- TFT Frame Fit Dialog -->
-    <string name="btn_tft_fit">📺 TFT</string>
+    <string name="btn_tft_fit">Padding Settings</string>
     <string name="btn_tft_padding_settings">📺 Ajustes de Barra Negra TFT</string>
     <string name="tft_fit_dialog_title">📺 Ajuste de Marco TFT</string>
     <string name="tft_fit_dialog_description">Ajuste las alturas de las barras negras superior e inferior para alinear el mapa con la pantalla TFT:</string>
     <string name="tft_fit_top_label">Barra Negra Superior: %1$d dp</string>
     <string name="tft_fit_bottom_label">Barra Negra Inferior: %1$d dp</string>
     <string name="tft_fit_reset">Restablecer</string>
+    <string name="btn_cancel">Cancelar</string>
     <string name="tft_fit_save">Guardar y Cerrar</string>
     <string name="toast_tft_fit_saved">✅ Marco TFT Guardado</string>
 

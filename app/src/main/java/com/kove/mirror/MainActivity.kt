@@ -42,8 +42,8 @@ class MainActivity : AppCompatActivity() {
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
-    private val languageCodes = listOf("tr", "en", "el", "es")
-    private val languageNames = listOf("Türkçe", "English", "Ελληνικά", "Español")
+    private val languageCodes = listOf("tr", "en", "el", "es", "it")
+    private val languageNames = listOf("Türkçe", "English", "Ελληνικά", "Español", "Italiano")
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.applyLocale(newBase))

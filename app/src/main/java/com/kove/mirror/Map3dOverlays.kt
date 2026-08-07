@@ -66,7 +66,16 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
             LineLayer("kove-nav-line", "kove-nav-3d")
                 .withProperties(
                     PropertyFactory.lineColor("#2563EB"),
-                    PropertyFactory.lineWidth(7f * density),
+                    PropertyFactory.lineWidth(
+                        Expression.interpolate(
+                            Expression.exponential(1.3f), Expression.zoom(),
+                            Expression.stop(10, 1.5f * density),
+                            Expression.stop(13, 3f * density),
+                            Expression.stop(15, 5.5f * density),
+                            Expression.stop(17, 9f * density),
+                            Expression.stop(19, 14f * density)
+                        )
+                    ),
                     PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                     PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
                 )
@@ -77,7 +86,16 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
             LineLayer("kove-track-line", "kove-track-3d")
                 .withProperties(
                     PropertyFactory.lineColor(Expression.get("color")),
-                    PropertyFactory.lineWidth(8f * density),
+                    PropertyFactory.lineWidth(
+                        Expression.interpolate(
+                            Expression.exponential(1.3f), Expression.zoom(),
+                            Expression.stop(10, 1.5f * density),
+                            Expression.stop(13, 3f * density),
+                            Expression.stop(15, 5.5f * density),
+                            Expression.stop(17, 9f * density),
+                            Expression.stop(19, 14f * density)
+                        )
+                    ),
                     PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                     PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
                 )

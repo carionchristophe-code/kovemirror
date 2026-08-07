@@ -207,6 +207,8 @@
     <string name="label_cursor_shape">Location Cursor Shape:</string>
     <string name="label_cursor_color">Cursor Color:</string>
     <string name="label_cursor_preview">Cursor Preview:</string>
+    <string name="label_recording_color">Track Recording Color:</string>
+    <string name="btn_open_tft_padding">🖼️ Padding Settings</string>
     <string name="cursor_shape_arrow">⬆️ Navigation Arrow</string>
     <string name="cursor_shape_motorcycle">🏍️ Motorcycle</string>
     <string name="cursor_shape_circle">🟢 Circle Dot</string>
@@ -282,13 +284,14 @@
     <string name="toast_my_location">📍 Get back to my location</string>
 
     <!-- TFT Frame Fit Dialog -->
-    <string name="btn_tft_fit">📺 TFT</string>
+    <string name="btn_tft_fit">Padding Settings</string>
     <string name="btn_tft_padding_settings">📺 TFT Black Bar / Margin Settings</string>
     <string name="tft_fit_dialog_title">📺 TFT Screen Fit Adjustment</string>
     <string name="tft_fit_dialog_description">Adjust top and bottom black bar heights to align the map with your motorcycle TFT display:</string>
     <string name="tft_fit_top_label">Top Black Bar: %1$d dp</string>
     <string name="tft_fit_bottom_label">Bottom Black Bar: %1$d dp</string>
     <string name="tft_fit_reset">Reset</string>
+    <string name="btn_cancel">Cancel</string>
     <string name="tft_fit_save">Save &amp; Close</string>
     <string name="toast_tft_fit_saved">✅ TFT Frame Fit Saved</string>
 

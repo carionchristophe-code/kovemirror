@@ -154,6 +154,87 @@
                 android:layout_margin="4dp" />
         </LinearLayout>
 
+        <!-- Section 4: Track Recording Color -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/label_recording_color"
+            android:textColor="#38BDF8"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/llTrackColorContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="20dp">
+
+            <View
+                android:id="@+id/recColorRed"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#EF4444"
+                android:layout_margin="4dp" />
+
+            <View
+                android:id="@+id/recColorOrange"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#F97316"
+                android:layout_margin="4dp" />
+
+            <View
+                android:id="@+id/recColorCyan"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#06B6D4"
+                android:layout_margin="4dp" />
+
+            <View
+                android:id="@+id/recColorGreen"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#10B981"
+                android:layout_margin="4dp" />
+
+            <View
+                android:id="@+id/recColorMagenta"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#D500F9"
+                android:layout_margin="4dp" />
+
+            <View
+                android:id="@+id/recColorYellow"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#EAB308"
+                android:layout_margin="4dp" />
+        </LinearLayout>
+
+        <!-- Section 5: TFT Screen Frame Fit -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_tft_fit"
+            android:textColor="#38BDF8"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnOpenTftPadding"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="@string/btn_open_tft_padding"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:background="#475569"
+            android:layout_marginBottom="20dp" />
+
         <!-- Preview Circle / Icon -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -185,10 +266,10 @@
             android:gravity="end">
 
             <Button
-                android:id="@+id/btnResetMapSettings"
+                android:id="@+id/btnCancelMapSettings"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:text="@string/tft_fit_reset"
+                android:text="@string/btn_cancel"
                 android:textColor="#94A3B8"
                 android:background="#1E293B"
                 android:layout_marginEnd="8dp" />
