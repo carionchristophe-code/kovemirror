@@ -88,35 +88,16 @@
                 android:focusable="true"
                 android:layout_marginEnd="4dp" />
 
-            <!-- Layer: Maps -->
-            <!-- Layer: Maps / Topo / Satellite (one button, cycles on tap) -->
+            <!-- Layer Dropdown Menu -->
             <TextView
-                android:id="@+id/btnLayerMaps"
+                android:id="@+id/btnLayerMenu"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
-                android:text="@string/map_layer_maps"
+                android:text="🗺️ OSM Map ▼"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
                 android:background="#2979FF"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:gravity="center"
-                android:includeFontPadding="false"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginEnd="4dp" />
-
-            <!-- Layer: Offline (.map) -->
-            <TextView
-                android:id="@+id/btnLayerOffline"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="@string/map_layer_offline"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:background="#555555"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:gravity="center"
@@ -322,6 +303,21 @@
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:padding="0dp" />
+
+        <!-- Favorites & Address Search Button -->
+        <Button
+            android:id="@+id/btnFavorites"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="⭐"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#CC333333"
+            android:elevation="4dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:layout_marginTop="8dp" />
     </LinearLayout>
 
     <!-- Bottom-Left GPS Info Overlay (Speed & Altitude) -->
@@ -448,19 +444,29 @@
                 android:textSize="12sp"
                 android:textColor="#FFFFFF"
                 android:background="#475569"
-                android:layout_marginEnd="6dp" />
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnSaveFavDest"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="@string/btn_add_favorite"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                android:background="#D97706"
+                android:layout_marginEnd="4dp" />
 
             <Button
                 android:id="@+id/btnStartNav"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
-                android:layout_weight="2"
+                android:layout_weight="1.5"
                 android:text="@string/nav_start_navigation"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"
-                android:background="#2563EB"
-                android:layout_marginStart="6dp" />
+                android:background="#2563EB" />
         </LinearLayout>
     </LinearLayout>
 

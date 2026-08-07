@@ -26,6 +26,7 @@ enum class HandlebarActionMode(
     val isEntAction: Boolean
 ) {
     MY_LOCATION(R.string.handlebar_mode_my_location, isEntAction = true),
+    TOGGLE_3D(R.string.handlebar_mode_toggle_3d, isEntAction = true),
     ZOOM(R.string.handlebar_mode_zoom, isEntAction = false),
     PAN_VERTICAL(R.string.handlebar_mode_pan_vertical, isEntAction = false),
     PAN_HORIZONTAL(R.string.handlebar_mode_pan_horizontal, isEntAction = false),

@@ -165,10 +165,13 @@
     <!-- Χάρτης & Διαδρομές -->
     <string name="btn_open_map">🗺️  Χάρτης &amp; Διαδρομή</string>
     <string name="map_title">🗺️ Χάρτης &amp; Παρακολούθηση Διαδρομών</string>
-    <string name="map_layer_maps">Χάρτες</string>
-    <string name="map_layer_topo">Τοπο</string>
-    <string name="map_layer_sat">Δορυφόρος</string>
-    <string name="map_layer_offline">Χωρίς σύνδεση</string>
+    <string name="map_layer_maps">🗺️ Χάρτης OSM</string>
+    <string name="map_layer_topo">🏔️ OpenTopo</string>
+    <string name="map_layer_sat">🛰️ Δορυφόρος Esri</string>
+    <string name="map_layer_google_maps">🗺️ Google Maps</string>
+    <string name="map_layer_google_sat">🛰️ Δορυφόρος Google (Καθαρός)</string>
+    <string name="map_layer_google_hybrid">🛰️ Υβριδικός Google</string>
+    <string name="map_layer_offline">📂 Χάρτης χωρίς σύνδεση (.map)</string>
     <string name="map_layer_3d">3D</string>
     <string name="map_3d_offline">⬇️ Χωρίς σύνδεση</string>
     <string name="map_3d_loading">🌍 Φόρτωση χάρτη 3D…</string>
@@ -183,6 +186,19 @@
     <string name="map_btn_gps_on">📍 GPS ON</string>
     <string name="map_btn_back">Πίσω</string>
     <string name="map_btn_close">Κλείσιμο</string>
+    <string name="map_btn_favorites">⭐ Αγαπημένα</string>
+    <string name="btn_add_favorite">⭐ Αγαπημένο</string>
+    <string name="dialog_favorites_title">⭐ Αγαπημένα &amp; Αναζήτηση</string>
+    <string name="search_address_hint">Αναζήτηση διεύθυνσης ή τοποθεσίας...</string>
+    <string name="btn_search">Αναζήτηση</string>
+    <string name="label_saved_favorites">Αποθηκευμένα Αγαπημένα</string>
+    <string name="label_search_results">Αποτελέσματα Αναζήτησης</string>
+    <string name="toast_favorite_saved">✅ Αγαπημένο αποθηκεύτηκε: %1$s</string>
+    <string name="toast_favorite_deleted">🗑️ Αγαπημένο διαγράφηκε</string>
+    <string name="dialog_save_fav_title">Αποθήκευση Αγαπημένης Τοποθεσίας</string>
+    <string name="dialog_save_fav_prompt">Εισαγάγετε ένα όνομα για αυτήν την τοποθεσία:</string>
+    <string name="no_favorites_yet">Δεν υπάρχουν ακόμη αποθηκευμένα αγαπημένα</string>
+    <string name="no_results_found">Δεν βρέθηκαν αποτελέσματα αναζήτησης</string>
     <string name="map_btn_cancel">Ακύρωση</string>
     <string name="map_btn_apply">Εφαρμογή</string>
     <string name="map_loaded_routes">Φορτωμένες Διαδρομές</string>
@@ -269,14 +285,15 @@
 
     <!-- Handlebar Mode Names -->
     <string name="handlebar_mode_title">🎮 Μενού Τιμονιού</string>
-    <string name="handlebar_mode_my_location">Επιστροφή στη τοποθεσία μου</string>
+    <string name="handlebar_mode_my_location">Επιστροφή στη τοποθεσία μου [ENT]</string>
+    <string name="handlebar_mode_toggle_3d">Εναλλαγή Χάρτη 3D / 2D [ENT]</string>
     <string name="handlebar_mode_zoom">Μεγέθυνση / Σμίκρυνση</string>
     <string name="handlebar_mode_pan_vertical">Μετακίνηση Πάνω / Κάτω</string>
     <string name="handlebar_mode_pan_horizontal">Μετακίνηση Αριστερά / Δεξιά</string>
     <string name="handlebar_mode_media_track">Επόμενο / Προηγούμενο Κομμάτι</string>
     <string name="handlebar_mode_volume">Αύξηση / Μείωση Έντασης</string>
-    <string name="handlebar_mode_play">Αναπαραγωγή</string>
-    <string name="handlebar_mode_pause">Παύση</string>
+    <string name="handlebar_mode_play">Αναπαραγωγή [ENT]</string>
+    <string name="handlebar_mode_pause">Παύση [ENT]</string>
     <string name="handlebar_mode_app_switch">Επόμενη / Προηγούμενη Εφαρμογή</string>
 
     <!-- Handlebar Toasts -->

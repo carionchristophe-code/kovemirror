@@ -165,10 +165,13 @@
     <!-- Harita & Rota Özelliği -->
     <string name="btn_open_map">🗺️  Harita &amp; Rota</string>
     <string name="map_title">🗺️ Harita &amp; Rota Takibi</string>
-    <string name="map_layer_maps">Harita</string>
-    <string name="map_layer_topo">Topo</string>
-    <string name="map_layer_sat">Uydu</string>
-    <string name="map_layer_offline">Çevrimdışı</string>
+    <string name="map_layer_maps">🗺️ OSM Harita</string>
+    <string name="map_layer_topo">🏔️ OpenTopo</string>
+    <string name="map_layer_sat">🛰️ Esri Uydu</string>
+    <string name="map_layer_google_maps">🗺️ Google Harita</string>
+    <string name="map_layer_google_sat">🛰️ Google Uydu (Saf)</string>
+    <string name="map_layer_google_hybrid">🛰️ Google Hibrit</string>
+    <string name="map_layer_offline">📂 Çevrimdışı Harita (.map)</string>
     <string name="map_layer_3d">3D</string>
     <string name="map_3d_offline">⬇️ Çevrimdışı</string>
     <string name="map_3d_loading">🌍 3D harita yükleniyor…</string>
@@ -269,14 +272,15 @@
 
     <!-- Handlebar Mode Names -->
     <string name="handlebar_mode_title">🎮 Gidon Menüsü</string>
-    <string name="handlebar_mode_my_location">Konumuma Dön</string>
+    <string name="handlebar_mode_my_location">Konumuma geri dön [ENT]</string>
+    <string name="handlebar_mode_toggle_3d">3D / 2D Harita Geçişi [ENT]</string>
     <string name="handlebar_mode_zoom">Yakınlaştır / Uzaklaştır</string>
     <string name="handlebar_mode_pan_vertical">Yukarı / Aşağı Kaydır</string>
     <string name="handlebar_mode_pan_horizontal">Sola / Sağa Kaydır</string>
     <string name="handlebar_mode_media_track">Sonraki / Önceki Parça</string>
     <string name="handlebar_mode_volume">Ses Aç / Kıs</string>
-    <string name="handlebar_mode_play">Oynat</string>
-    <string name="handlebar_mode_pause">Duraklat</string>
+    <string name="handlebar_mode_play">Oynat [ENT]</string>
+    <string name="handlebar_mode_pause">Duraklat [ENT]</string>
     <string name="handlebar_mode_app_switch">Sonraki / Önceki Uygulama</string>
 
     <!-- Handlebar Toasts -->
@@ -291,7 +295,19 @@
     <string name="tft_fit_top_label">Üst Siyah Bar: %1$d dp</string>
     <string name="tft_fit_bottom_label">Alt Siyah Bar: %1$d dp</string>
     <string name="tft_fit_reset">Sıfırla</string>
-    <string name="btn_cancel">Vazgeç</string>
+    <string name="map_btn_favorites">⭐ Favoriler</string>
+    <string name="btn_add_favorite">⭐ Favori</string>
+    <string name="dialog_favorites_title">⭐ Favoriler &amp; Adres Arama</string>
+    <string name="search_address_hint">Adres veya mekan adı girin...</string>
+    <string name="btn_search">Ara</string>
+    <string name="label_saved_favorites">Kayıtlı Favoriler</string>
+    <string name="label_search_results">Arama Sonuçları</string>
+    <string name="toast_favorite_saved">✅ Favori kaydedildi: %1$s</string>
+    <string name="toast_favorite_deleted">🗑️ Favori silindi</string>
+    <string name="dialog_save_fav_title">Favori Konum Kaydet</string>
+    <string name="dialog_save_fav_prompt">Bu konum için bir isim girin:</string>
+    <string name="no_favorites_yet">Henüz kayıtlı favori konum yok</string>
+    <string name="no_results_found">Aramanıza uygun sonuç bulunamadı</string>
     <string name="tft_fit_save">Kaydet &amp; Kapat</string>
     <string name="toast_tft_fit_saved">✅ TFT Çerçeve Ayarı Kaydedildi</string>
 

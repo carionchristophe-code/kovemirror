@@ -165,10 +165,13 @@
     <!-- Map & Route Feature -->
     <string name="btn_open_map">🗺️  Map &amp; Route</string>
     <string name="map_title">🗺️ Map &amp; Route Tracking</string>
-    <string name="map_layer_maps">Maps</string>
-    <string name="map_layer_topo">Topo</string>
-    <string name="map_layer_sat">Satellite</string>
-    <string name="map_layer_offline">Offline</string>
+    <string name="map_layer_maps">🗺️ OSM Map</string>
+    <string name="map_layer_topo">🏔️ OpenTopo</string>
+    <string name="map_layer_sat">🛰️ Esri Satellite</string>
+    <string name="map_layer_google_maps">🗺️ Google Maps</string>
+    <string name="map_layer_google_sat">🛰️ Google Satellite</string>
+    <string name="map_layer_google_hybrid">🛰️ Google Hybrid</string>
+    <string name="map_layer_offline">📂 Offline Map (.map)</string>
     <string name="map_layer_3d">3D</string>
     <string name="map_3d_offline">⬇️ Offline</string>
     <string name="map_3d_loading">🌍 3D map loading…</string>
@@ -183,6 +186,19 @@
     <string name="map_btn_gps_on">📍 GPS ON</string>
     <string name="map_btn_back">Back</string>
     <string name="map_btn_close">Close</string>
+    <string name="map_btn_favorites">⭐ Favorites</string>
+    <string name="btn_add_favorite">⭐ Favorite</string>
+    <string name="dialog_favorites_title">⭐ Favorites &amp; Search</string>
+    <string name="search_address_hint">Search address or place...</string>
+    <string name="btn_search">Search</string>
+    <string name="label_saved_favorites">Saved Favorites</string>
+    <string name="label_search_results">Search Results</string>
+    <string name="toast_favorite_saved">✅ Favorite saved: %1$s</string>
+    <string name="toast_favorite_deleted">🗑️ Favorite deleted</string>
+    <string name="dialog_save_fav_title">Save Favorite Location</string>
+    <string name="dialog_save_fav_prompt">Enter a name for this location:</string>
+    <string name="no_favorites_yet">No saved favorites yet</string>
+    <string name="no_results_found">No search results found</string>
     <string name="map_btn_cancel">Cancel</string>
     <string name="map_btn_apply">Apply</string>
     <string name="map_loaded_routes">Loaded Routes</string>
@@ -269,14 +285,15 @@
 
     <!-- Handlebar Mode Names -->
     <string name="handlebar_mode_title">🎮 Handlebar Mode</string>
-    <string name="handlebar_mode_my_location">Get back to my location</string>
+    <string name="handlebar_mode_my_location">Get back to my location [ENT]</string>
+    <string name="handlebar_mode_toggle_3d">Toggle 3D / 2D Map [ENT]</string>
     <string name="handlebar_mode_zoom">Zoom In / Zoom Out</string>
     <string name="handlebar_mode_pan_vertical">Up / Down Pan</string>
     <string name="handlebar_mode_pan_horizontal">Left / Right Pan</string>
     <string name="handlebar_mode_media_track">Next Track / Prev Track</string>
     <string name="handlebar_mode_volume">Volume Up / Down</string>
-    <string name="handlebar_mode_play">Play</string>
-    <string name="handlebar_mode_pause">Pause</string>
+    <string name="handlebar_mode_play">Play [ENT]</string>
+    <string name="handlebar_mode_pause">Pause [ENT]</string>
     <string name="handlebar_mode_app_switch">Next App / Prev App</string>
 
     <!-- Handlebar Toasts -->

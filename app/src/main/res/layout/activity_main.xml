@@ -145,9 +145,10 @@
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnOpenMap"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
+                android:layout_height="80dp"
                 android:text="@string/btn_open_map"
-                android:textSize="12sp"
+                android:textSize="18sp"
+                android:textStyle="bold"
                 android:textColor="#F0F6FC"
                 android:textAllCaps="false"
                 android:background="@drawable/bg_button_secondary"

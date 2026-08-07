@@ -73,12 +73,21 @@ class MapActivity : AppCompatActivity() {
         private const val LAYER_TOPO = 1
         private const val LAYER_SATELLITE = 2
         private const val LAYER_OFFLINE = 3
-        private const val LAYER_3D = 4
+        private const val LAYER_GOOGLE_MAPS = 4
+        private const val LAYER_GOOGLE_SAT = 5
+        private const val LAYER_GOOGLE_HYBRID = 6
+        private const val LAYER_3D = 7
 
         private const val THREE_D_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
         private const val THREE_D_BUILDINGS_URL = "https://tiles.openfreemap.org/planet"
         private const val THREE_D_SATELLITE_URL =
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        private const val THREE_D_GOOGLE_MAPS_URL =
+            "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+        private const val THREE_D_GOOGLE_SAT_URL =
+            "https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+        private const val THREE_D_GOOGLE_HYBRID_URL =
+            "https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
     }
 
     private lateinit var mapView: MapView
@@ -148,16 +157,66 @@ class MapActivity : AppCompatActivity() {
         )
     )
 
-    private val satelliteTileSource: OnlineTileSourceBase = object : XYTileSource(
-        "EsriSatellite",
+    private val satelliteTileSource = object : OnlineTileSourceBase(
+        "EsriWorldImagery",
         0, 19, 256, ".jpg",
         arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
     ) {
         override fun getTileURLString(pMapTileIndex: Long): String {
-            val zoom = MapTileIndex.getZoom(pMapTileIndex)
-            val x = MapTileIndex.getX(pMapTileIndex)
-            val y = MapTileIndex.getY(pMapTileIndex)
-            return "${baseUrl}$zoom/$y/$x"
+            return baseUrl + MapTileIndex.getZoom(pMapTileIndex) + "/" +
+                    MapTileIndex.getY(pMapTileIndex) + "/" +
+                    MapTileIndex.getX(pMapTileIndex)
+        }
+    }
+
+    private val googleMapsTileSource = object : OnlineTileSourceBase(
+        "GoogleMaps",
+        0, 20, 256, ".png",
+        arrayOf(
+            "https://mt0.google.com/vt/lyrs=m",
+            "https://mt1.google.com/vt/lyrs=m",
+            "https://mt2.google.com/vt/lyrs=m",
+            "https://mt3.google.com/vt/lyrs=m"
+        )
+    ) {
+        override fun getTileURLString(pMapTileIndex: Long): String {
+            return baseUrl + "&x=" + MapTileIndex.getX(pMapTileIndex) +
+                    "&y=" + MapTileIndex.getY(pMapTileIndex) +
+                    "&z=" + MapTileIndex.getZoom(pMapTileIndex)
+        }
+    }
+
+    private val googleSatTileSource = object : OnlineTileSourceBase(
+        "GoogleSatellite",
+        0, 20, 256, ".jpg",
+        arrayOf(
+            "https://mt0.google.com/vt/lyrs=s",
+            "https://mt1.google.com/vt/lyrs=s",
+            "https://mt2.google.com/vt/lyrs=s",
+            "https://mt3.google.com/vt/lyrs=s"
+        )
+    ) {
+        override fun getTileURLString(pMapTileIndex: Long): String {
+            return baseUrl + "&x=" + MapTileIndex.getX(pMapTileIndex) +
+                    "&y=" + MapTileIndex.getY(pMapTileIndex) +
+                    "&z=" + MapTileIndex.getZoom(pMapTileIndex)
+        }
+    }
+
+    private val googleHybridTileSource = object : OnlineTileSourceBase(
+        "GoogleHybrid",
+        0, 20, 256, ".jpg",
+        arrayOf(
+            "https://mt0.google.com/vt/lyrs=y",
+            "https://mt1.google.com/vt/lyrs=y",
+            "https://mt2.google.com/vt/lyrs=y",
+            "https://mt3.google.com/vt/lyrs=y"
+        )
+    ) {
+        override fun getTileURLString(pMapTileIndex: Long): String {
+            return baseUrl + "&x=" + MapTileIndex.getX(pMapTileIndex) +
+                    "&y=" + MapTileIndex.getY(pMapTileIndex) +
+                    "&z=" + MapTileIndex.getZoom(pMapTileIndex)
         }
     }
 
@@ -221,6 +280,9 @@ class MapActivity : AppCompatActivity() {
     private fun setupMap() {
         mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.setMultiTouchControls(true)
+        val rotationGestureOverlay = org.osmdroid.views.overlay.gestures.RotationGestureOverlay(mapView)
+        rotationGestureOverlay.isEnabled = true
+        mapView.overlays.add(rotationGestureOverlay)
         @Suppress("DEPRECATION")
         mapView.setBuiltInZoomControls(false)
 
@@ -368,18 +430,24 @@ class MapActivity : AppCompatActivity() {
     // Builds the MapLibre style corresponding to the current base layer
     // (Maps/Topo -> OpenFreeMap liberty, Satellite -> Esri World Imagery raster).
     private fun styleFor3dBaseLayer(): Style.Builder {
-        return if (currentBaseLayer == LAYER_SATELLITE) {
-            Style.Builder()
-                .withSource(RasterSource("esri-satellite", TileSet("2.1.0", THREE_D_SATELLITE_URL), 256))
-                .withLayer(
-                    BackgroundLayer("satellite-bg").withProperties(
-                        PropertyFactory.backgroundColor(Color.parseColor("#1a1a2e"))
-                    )
-                )
-                .withLayer(RasterLayer("esri-satellite-layer", "esri-satellite"))
-        } else {
-            Style.Builder().fromUri(THREE_D_STYLE_URL)
+        return when (currentBaseLayer) {
+            LAYER_SATELLITE -> createRasterStyleBuilder("esri-sat", THREE_D_SATELLITE_URL)
+            LAYER_GOOGLE_MAPS -> createRasterStyleBuilder("google-maps", THREE_D_GOOGLE_MAPS_URL)
+            LAYER_GOOGLE_SAT -> createRasterStyleBuilder("google-sat", THREE_D_GOOGLE_SAT_URL)
+            LAYER_GOOGLE_HYBRID -> createRasterStyleBuilder("google-hybrid", THREE_D_GOOGLE_HYBRID_URL)
+            else -> Style.Builder().fromUri(THREE_D_STYLE_URL)
         }
+    }
+
+    private fun createRasterStyleBuilder(sourceId: String, tileUrl: String): Style.Builder {
+        return Style.Builder()
+            .withSource(RasterSource(sourceId, TileSet("2.1.0", tileUrl), 256))
+            .withLayer(
+                BackgroundLayer("$sourceId-bg").withProperties(
+                    PropertyFactory.backgroundColor(Color.parseColor("#1a1a2e"))
+                )
+            )
+            .withLayer(RasterLayer("$sourceId-layer", sourceId))
     }
 
     // (Re)loads the 3D style for the current base layer while staying in 3D mode.
@@ -572,28 +640,43 @@ class MapActivity : AppCompatActivity() {
     }
 
     private fun onMapLongPressed(point: GeoPoint) {
+        selectDestinationPoint(point)
+        GeocoderHelper.reverseGeocode(point.latitude, point.longitude) { address ->
+            if (address.isNotEmpty() && selectedDestination == point) {
+                findViewById<TextView>(R.id.tvDestCoords)?.text = address
+                val title = address.split(",").firstOrNull()?.trim() ?: address
+                destinationMarker?.title = title
+            }
+        }
+    }
+
+    private fun selectDestinationPoint(point: GeoPoint, labelName: String? = null) {
         selectedDestination = point
 
-        // Place or move marker
         if (destinationMarker == null) {
             destinationMarker = Marker(mapView).apply {
-                title = getString(R.string.nav_destination_selected)
+                title = labelName ?: getString(R.string.nav_destination_selected)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             }
             mapView.overlays.add(destinationMarker)
         }
         destinationMarker?.position = point
+        if (labelName != null) {
+            destinationMarker?.title = labelName
+        }
         mapView.invalidate()
         map3d?.setDestination(LatLng(point.latitude, point.longitude))
 
-        // Show Destination Card
         val destCard = findViewById<LinearLayout>(R.id.destCard)
         val tvCoords = findViewById<TextView>(R.id.tvDestCoords)
         val tvDist = findViewById<TextView>(R.id.tvDestDist)
 
-        tvCoords.text = String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude)
+        if (labelName != null) {
+            tvCoords.text = labelName
+        } else {
+            tvCoords.text = String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude)
+        }
 
-        // Calculate approximate air distance from current location
         val myLoc = locationOverlay?.myLocation
         if (myLoc != null) {
             val distMeters = myLoc.distanceToAsDouble(point)
@@ -604,6 +687,11 @@ class MapActivity : AppCompatActivity() {
         }
 
         destCard.visibility = View.VISIBLE
+        if (currentLayer == LAYER_3D) {
+            maplibreMap?.animateCamera(CameraUpdateFactory.newLatLng(LatLng(point.latitude, point.longitude)))
+        } else {
+            mapView.controller.animateTo(point)
+        }
     }
 
     private fun cancelDestinationSelection() {
@@ -812,6 +900,66 @@ class MapActivity : AppCompatActivity() {
         )
     }
 
+    private fun performZoomIn() {
+        if (currentLayer == LAYER_3D) {
+            val map = maplibreMap ?: return
+            val curZoom = map.cameraPosition?.zoom ?: 16.0
+            val target = if (isGpsEnabled && locationOverlay?.myLocation != null) {
+                val loc = locationOverlay!!.myLocation
+                LatLng(loc.latitude, loc.longitude)
+            } else {
+                map.cameraPosition?.target
+            }
+            if (target != null) {
+                val newCamera = CameraPosition.Builder(map.cameraPosition)
+                    .target(target)
+                    .zoom((curZoom + 1.0).coerceAtMost(20.0))
+                    .build()
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(newCamera))
+            } else {
+                map.animateCamera(CameraUpdateFactory.zoomIn())
+            }
+        } else {
+            val myLoc = if (isGpsEnabled) locationOverlay?.myLocation else null
+            if (myLoc != null) {
+                val p = mapView.projection.toPixels(myLoc, null)
+                mapView.controller.zoomInFixing(p.x, p.y)
+            } else {
+                mapView.controller.zoomIn()
+            }
+        }
+    }
+
+    private fun performZoomOut() {
+        if (currentLayer == LAYER_3D) {
+            val map = maplibreMap ?: return
+            val curZoom = map.cameraPosition?.zoom ?: 16.0
+            val target = if (isGpsEnabled && locationOverlay?.myLocation != null) {
+                val loc = locationOverlay!!.myLocation
+                LatLng(loc.latitude, loc.longitude)
+            } else {
+                map.cameraPosition?.target
+            }
+            if (target != null) {
+                val newCamera = CameraPosition.Builder(map.cameraPosition)
+                    .target(target)
+                    .zoom((curZoom - 1.0).coerceAtLeast(2.0))
+                    .build()
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(newCamera))
+            } else {
+                map.animateCamera(CameraUpdateFactory.zoomOut())
+            }
+        } else {
+            val myLoc = if (isGpsEnabled) locationOverlay?.myLocation else null
+            if (myLoc != null) {
+                val p = mapView.projection.toPixels(myLoc, null)
+                mapView.controller.zoomOutFixing(p.x, p.y)
+            } else {
+                mapView.controller.zoomOut()
+            }
+        }
+    }
+
     // ─── Buttons Setup ──────────────────────────────────────────
 
     private fun setupButtons() {
@@ -824,22 +972,8 @@ class MapActivity : AppCompatActivity() {
             }
         }
 
-        // Layer buttons (Maps/Topo/Satellite cycle, Offline, 3D)
-        val btnMaps = findViewById<View>(R.id.btnLayerMaps)
-        val btnOffline = findViewById<View>(R.id.btnLayerOffline)
-
-        btnMaps.setOnClickListener { cycleBaseLayer() }
-        btnOffline.setOnClickListener {
-            if (currentLayer == LAYER_OFFLINE) {
-                selectOfflineMapFile()
-            } else {
-                switchLayer(LAYER_OFFLINE)
-            }
-        }
-        btnOffline.setOnLongClickListener {
-            selectOfflineMapFile()
-            true
-        }
+        // Layer dropdown menu button
+        findViewById<View>(R.id.btnLayerMenu)?.setOnClickListener { showLayerPopupMenu(it) }
 
         // 3D layer button
         findViewById<View>(R.id.btnLayer3D).setOnClickListener {
@@ -848,20 +982,15 @@ class MapActivity : AppCompatActivity() {
         }
 
         // Zoom buttons
-        findViewById<Button>(R.id.btnZoomIn).setOnClickListener {
-            if (currentLayer == LAYER_3D) maplibreMap?.animateCamera(CameraUpdateFactory.zoomIn())
-            else mapView.controller.zoomIn()
-        }
-        findViewById<Button>(R.id.btnZoomOut).setOnClickListener {
-            if (currentLayer == LAYER_3D) maplibreMap?.animateCamera(CameraUpdateFactory.zoomOut())
-            else mapView.controller.zoomOut()
-        }
+        findViewById<Button>(R.id.btnZoomIn).setOnClickListener { performZoomIn() }
+        findViewById<Button>(R.id.btnZoomOut).setOnClickListener { performZoomOut() }
 
         // My location button (center on GPS)
         findViewById<Button>(R.id.btnMyLocation).setOnClickListener { centerOnMyLocation() }
 
         // Destination Card Buttons
         findViewById<Button>(R.id.btnCancelDest).setOnClickListener { cancelDestinationSelection() }
+        findViewById<Button>(R.id.btnSaveFavDest)?.setOnClickListener { saveCurrentDestinationAsFavorite() }
         findViewById<Button>(R.id.btnStartNav).setOnClickListener { startNavigation() }
 
         // Turn Banner Stop Nav Button
@@ -875,6 +1004,9 @@ class MapActivity : AppCompatActivity() {
 
         // GPS toggle
         findViewById<Button>(R.id.btnGpsToggle).setOnClickListener { toggleGps() }
+
+        // Favorites & Address Search
+        findViewById<Button>(R.id.btnFavorites)?.setOnClickListener { showFavoritesAndSearchDialog() }
 
         // Route list toggle
         val btnRouteList = findViewById<Button>(R.id.btnRouteList)
@@ -988,25 +1120,35 @@ class MapActivity : AppCompatActivity() {
 
     // ─── Layer Switching (3 modes) ──────────────────────────────
 
-    private fun cycleBaseLayer() {
-        currentBaseLayer = when (currentBaseLayer) {
-            LAYER_MAPS -> LAYER_TOPO
-            LAYER_TOPO -> LAYER_SATELLITE
-            else -> LAYER_MAPS
+    private fun showLayerPopupMenu(anchor: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+        popup.menu.add(0, LAYER_MAPS, 0, getString(R.string.map_layer_maps))
+        popup.menu.add(0, LAYER_TOPO, 1, getString(R.string.map_layer_topo))
+        popup.menu.add(0, LAYER_SATELLITE, 2, getString(R.string.map_layer_sat))
+        popup.menu.add(0, LAYER_GOOGLE_MAPS, 3, getString(R.string.map_layer_google_maps))
+        popup.menu.add(0, LAYER_GOOGLE_SAT, 4, getString(R.string.map_layer_google_sat))
+        popup.menu.add(0, LAYER_GOOGLE_HYBRID, 5, getString(R.string.map_layer_google_hybrid))
+        popup.menu.add(0, LAYER_OFFLINE, 6, getString(R.string.map_layer_offline))
+
+        popup.setOnMenuItemClickListener { item ->
+            val selectedLayer = item.itemId
+            if (selectedLayer == LAYER_OFFLINE && currentLayer == LAYER_OFFLINE) {
+                selectOfflineMapFile()
+            } else {
+                switchLayer(selectedLayer)
+            }
+            true
         }
-        if (currentLayer == LAYER_3D) {
-            layerBefore3d = currentBaseLayer
-            apply3dBaseLayer()
-            updateLayerButtons()
-        } else {
-            switchLayer(currentBaseLayer)
-        }
+        popup.show()
     }
 
     private fun switchLayer(layer: Int) {
         val prevLayer = currentLayer
         currentLayer = layer
-        if (layer == LAYER_MAPS || layer == LAYER_TOPO || layer == LAYER_SATELLITE) {
+        if (layer == LAYER_MAPS || layer == LAYER_TOPO || layer == LAYER_SATELLITE ||
+            layer == LAYER_GOOGLE_MAPS || layer == LAYER_GOOGLE_SAT || layer == LAYER_GOOGLE_HYBRID ||
+            layer == LAYER_OFFLINE
+        ) {
             currentBaseLayer = layer
         }
 
@@ -1018,7 +1160,6 @@ class MapActivity : AppCompatActivity() {
             return
         }
         leave3dMode()
-        updateLayerButtons()
 
         if (layer != LAYER_OFFLINE && mapView.tileProvider !is org.osmdroid.tileprovider.MapTileProviderBasic) {
             mapView.tileProvider = org.osmdroid.tileprovider.MapTileProviderBasic(this)
@@ -1028,6 +1169,9 @@ class MapActivity : AppCompatActivity() {
             LAYER_MAPS -> mapView.setTileSource(TileSourceFactory.MAPNIK)
             LAYER_TOPO -> mapView.setTileSource(openTopoTileSource)
             LAYER_SATELLITE -> mapView.setTileSource(satelliteTileSource)
+            LAYER_GOOGLE_MAPS -> mapView.setTileSource(googleMapsTileSource)
+            LAYER_GOOGLE_SAT -> mapView.setTileSource(googleSatTileSource)
+            LAYER_GOOGLE_HYBRID -> mapView.setTileSource(googleHybridTileSource)
             LAYER_OFFLINE -> {
                 val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
                 val mapPath = prefs.getString("offline_map_path", null)
@@ -1054,8 +1198,6 @@ class MapActivity : AppCompatActivity() {
                         )
                         mapView.tileProvider = forgeProvider
                         mapView.setTileSource(fromFiles)
-
-                        // Keep current zoom level and map position when loading offline map
                     } catch (e: Exception) {
                         DebugLogger.error("❌ MapsForge tile source error: ${e.message}")
                         Toast.makeText(this, getString(R.string.error_invalid_map_file), Toast.LENGTH_SHORT).show()
@@ -1068,31 +1210,186 @@ class MapActivity : AppCompatActivity() {
             }
         }
         applyMapTheme()
+        updateLayerButtons()
         mapView.invalidate()
     }
 
-    // Refreshes base/offline/3D button highlight and text for the current state.
     private fun updateLayerButtons() {
-        val btnBase = findViewById<TextView>(R.id.btnLayerMaps)
-        val btnOffline = findViewById<View>(R.id.btnLayerOffline)
-        val btn3D = findViewById<View>(R.id.btnLayer3D)
+        val btnMenu = findViewById<TextView>(R.id.btnLayerMenu) ?: return
+        val btn3D = findViewById<View>(R.id.btnLayer3D) ?: return
 
         val activeColor = Color.parseColor("#2979FF")
         val inactiveColor = Color.parseColor("#555555")
 
-        val isBaseActive = currentLayer == LAYER_MAPS || currentLayer == LAYER_TOPO
-            || currentLayer == LAYER_SATELLITE
-        btnBase.setBackgroundColor(if (isBaseActive) activeColor else inactiveColor)
-        btnBase.text = when (currentBaseLayer) {
+        val currentLabel = when (currentBaseLayer) {
             LAYER_TOPO -> getString(R.string.map_layer_topo)
             LAYER_SATELLITE -> getString(R.string.map_layer_sat)
+            LAYER_GOOGLE_MAPS -> getString(R.string.map_layer_google_maps)
+            LAYER_GOOGLE_SAT -> getString(R.string.map_layer_google_sat)
+            LAYER_GOOGLE_HYBRID -> getString(R.string.map_layer_google_hybrid)
+            LAYER_OFFLINE -> getString(R.string.map_layer_offline)
             else -> getString(R.string.map_layer_maps)
         }
-        btnOffline.setBackgroundColor(if (currentLayer == LAYER_OFFLINE) activeColor else inactiveColor)
+
+        btnMenu.text = "$currentLabel ▼"
+        btnMenu.setBackgroundColor(if (currentLayer != LAYER_3D) activeColor else inactiveColor)
         btn3D.setBackgroundColor(if (currentLayer == LAYER_3D) activeColor else inactiveColor)
     }
 
-    // ─── 3D Offline Regions (MapLibre) ───────────────────────────
+    // ─── Favorites & Geocoding ─────────────────────────────────
+
+    private fun saveCurrentDestinationAsFavorite() {
+        val dest = selectedDestination ?: return
+        val defaultName = destinationMarker?.title?.takeIf { it != getString(R.string.nav_destination_selected) }
+            ?: String.format(Locale.US, "Location (%.4f, %.4f)", dest.latitude, dest.longitude)
+
+        val input = EditText(this).apply {
+            setText(defaultName)
+            hint = getString(R.string.dialog_save_fav_prompt)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_save_fav_title)
+            .setMessage(R.string.dialog_save_fav_prompt)
+            .setView(input)
+            .setPositiveButton(R.string.map_btn_apply) { _, _ ->
+                val favName = input.text.toString().trim().ifEmpty { defaultName }
+                val fav = FavoriteLocation(
+                    name = favName,
+                    address = String.format(Locale.US, "%.5f, %.5f", dest.latitude, dest.longitude),
+                    latitude = dest.latitude,
+                    longitude = dest.longitude
+                )
+                FavoritesManager.saveFavorite(this, fav)
+                Toast.makeText(this, getString(R.string.toast_favorite_saved, favName), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.map_btn_cancel, null)
+            .show()
+    }
+
+    private fun showFavoritesAndSearchDialog() {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_favorites_search, null)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        val etSearch = view.findViewById<EditText>(R.id.etAddressQuery)
+        val btnSearch = view.findViewById<Button>(R.id.btnSearchAddress)
+        val tvSectionTitle = view.findViewById<TextView>(R.id.tvSectionTitle)
+        val container = view.findViewById<LinearLayout>(R.id.llFavoritesList)
+        val btnClose = view.findViewById<Button>(R.id.btnCloseFavDialog)
+
+        btnClose?.setOnClickListener { dialog.dismiss() }
+
+        fun renderFavorites() {
+            container.removeAllViews()
+            tvSectionTitle.text = getString(R.string.label_saved_favorites)
+            val favorites = FavoritesManager.getFavorites(this)
+            if (favorites.isEmpty()) {
+                val emptyTv = TextView(this).apply {
+                    text = getString(R.string.no_favorites_yet)
+                    setTextColor(Color.parseColor("#94A3B8"))
+                    textSize = 12f
+                    setPadding(16, 16, 16, 16)
+                }
+                container.addView(emptyTv)
+                return
+            }
+
+            for (fav in favorites) {
+                val item = LayoutInflater.from(this).inflate(R.layout.item_favorite_search, container, false)
+                item.findViewById<TextView>(R.id.tvItemTitle).text = fav.name
+                item.findViewById<TextView>(R.id.tvItemSubtitle).text = fav.address.ifEmpty { "%.5f, %.5f".format(fav.latitude, fav.longitude) }
+
+                item.findViewById<Button>(R.id.btnNavToItem).setOnClickListener {
+                    dialog.dismiss()
+                    selectDestinationPoint(GeoPoint(fav.latitude, fav.longitude), fav.name)
+                    startNavigation()
+                }
+
+                val btnAction = item.findViewById<Button>(R.id.btnActionItem)
+                btnAction.text = "🗑️"
+                btnAction.setOnClickListener {
+                    FavoritesManager.deleteFavorite(this, fav.id)
+                    Toast.makeText(this, getString(R.string.toast_favorite_deleted), Toast.LENGTH_SHORT).show()
+                    renderFavorites()
+                }
+
+                container.addView(item)
+            }
+        }
+
+        fun doSearch() {
+            val query = etSearch.text.toString().trim()
+            if (query.isEmpty()) {
+                renderFavorites()
+                return
+            }
+
+            tvSectionTitle.text = "${getString(R.string.label_search_results)}: \"$query\""
+            container.removeAllViews()
+            val loadingTv = TextView(this).apply {
+                text = getString(R.string.nav_calculating)
+                setTextColor(Color.parseColor("#38BDF8"))
+                textSize = 12f
+                setPadding(16, 16, 16, 16)
+            }
+            container.addView(loadingTv)
+
+            GeocoderHelper.searchAddress(query) { results ->
+                container.removeAllViews()
+                if (results.isEmpty()) {
+                    val noResultsTv = TextView(this).apply {
+                        text = getString(R.string.no_results_found)
+                        setTextColor(Color.parseColor("#EF4444"))
+                        textSize = 12f
+                        setPadding(16, 16, 16, 16)
+                    }
+                    container.addView(noResultsTv)
+                    return@searchAddress
+                }
+
+                for (res in results) {
+                    val item = LayoutInflater.from(this).inflate(R.layout.item_favorite_search, container, false)
+                    item.findViewById<TextView>(R.id.tvItemTitle).text = res.name
+                    item.findViewById<TextView>(R.id.tvItemSubtitle).text = res.address
+
+                    item.findViewById<Button>(R.id.btnNavToItem).setOnClickListener {
+                        dialog.dismiss()
+                        selectDestinationPoint(GeoPoint(res.latitude, res.longitude), res.name)
+                        startNavigation()
+                    }
+
+                    val btnAction = item.findViewById<Button>(R.id.btnActionItem)
+                    btnAction.text = "⭐"
+                    btnAction.setOnClickListener {
+                        val fav = FavoriteLocation(
+                            name = res.name,
+                            address = res.address,
+                            latitude = res.latitude,
+                            longitude = res.longitude
+                        )
+                        FavoritesManager.saveFavorite(this, fav)
+                        btnAction.text = "✅"
+                        Toast.makeText(this, getString(R.string.toast_favorite_saved, res.name), Toast.LENGTH_SHORT).show()
+                    }
+
+                    container.addView(item)
+                }
+            }
+        }
+
+        btnSearch?.setOnClickListener { doSearch() }
+        etSearch?.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                doSearch()
+                true
+            } else false
+        }
+
+        renderFavorites()
+        dialog.show()
+    }
 
 
 
@@ -1839,11 +2136,18 @@ class MapActivity : AppCompatActivity() {
 
     // ─── Motorcycle Handlebar Buttons ────────────────────────────
 
-    private val myLocationReceiver = object : android.content.BroadcastReceiver() {
+    private val handlebarActionReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: Intent?) {
-            if (intent?.action == "com.kove.mirror.ACTION_MY_LOCATION") {
-                DebugLogger.info("📍 ACTION_MY_LOCATION received in MapActivity")
-                centerOnMyLocation()
+            when (intent?.action) {
+                "com.kove.mirror.ACTION_MY_LOCATION" -> {
+                    DebugLogger.info("📍 ACTION_MY_LOCATION received in MapActivity")
+                    centerOnMyLocation()
+                }
+                "com.kove.mirror.ACTION_TOGGLE_3D" -> {
+                    DebugLogger.info("🌐 ACTION_TOGGLE_3D received in MapActivity")
+                    if (currentLayer == LAYER_3D) switchLayer(layerBefore3d)
+                    else switchLayer(LAYER_3D)
+                }
             }
         }
     }
@@ -1889,17 +2193,20 @@ class MapActivity : AppCompatActivity() {
         mapView.onResume()
         mapView3d.onResume()
         HandlebarKeyManager.addListener(handlebarKeyListener)
-        val filter = android.content.IntentFilter("com.kove.mirror.ACTION_MY_LOCATION")
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.kove.mirror.ACTION_MY_LOCATION")
+            addAction("com.kove.mirror.ACTION_TOGGLE_3D")
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(myLocationReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(handlebarActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(myLocationReceiver, filter)
+            registerReceiver(handlebarActionReceiver, filter)
         }
     }
 
     override fun onPause() {
         super.onPause()
-        try { unregisterReceiver(myLocationReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(handlebarActionReceiver) } catch (_: Exception) {}
         HandlebarKeyManager.removeListener(handlebarKeyListener)
         mapView.onPause()
         mapView3d.onPause()

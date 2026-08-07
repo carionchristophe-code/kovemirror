@@ -305,6 +305,12 @@ class HandlebarOverlayService : Service() {
                 val intent = Intent("com.kove.mirror.ACTION_MY_LOCATION")
                 sendBroadcast(intent)
             }
+            HandlebarActionMode.TOGGLE_3D -> {
+                DebugLogger.info("🎮 Action: Toggle 3D / 2D Map")
+                Toast.makeText(this, getString(R.string.handlebar_mode_toggle_3d), Toast.LENGTH_SHORT).show()
+                val intent = Intent("com.kove.mirror.ACTION_TOGGLE_3D")
+                sendBroadcast(intent)
+            }
             HandlebarActionMode.ZOOM -> {
                 when (key) {
                     HandlebarKey.UP -> {
