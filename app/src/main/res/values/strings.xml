@@ -209,8 +209,10 @@
     <string name="map_route_preview">Preview:</string>
     <string name="map_route_toggle_visibility">Toggle Visibility</string>
     <string name="map_route_delete">Delete Route</string>
+    <string name="btn_clear_all_imported">🗑️ Clear All</string>
     <string name="map_import_success">✅ Imported %1$d route(s)</string>
     <string name="map_import_no_routes">⚠️ No routes found in file</string>
+    <string name="map_import_unsupported_format">⚠️ Unsupported file format (%1$s). Please select a .gpx, .kml, or .kmz file.</string>
     <string name="map_import_error">❌ Import error: %1$s</string>
     <string name="map_gps_permission_denied">⚠️ Location permission denied</string>
     <string name="map_waiting_gps">📍 Waiting for GPS fix…</string>

@@ -348,6 +348,22 @@
             android:minHeight="0dp"
             android:padding="0dp"
             android:layout_marginTop="8dp" />
+
+        <!-- Loaded Routes List Button -->
+        <Button
+            android:id="@+id/btnRouteList"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="📋"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#1565C0"
+            android:elevation="4dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Bottom-Left Speedometer & Speed Limit Sign -->
@@ -431,31 +447,6 @@
                 android:textSize="10sp"
                 android:includeFontPadding="false" />
         </LinearLayout>
-    </LinearLayout>
-
-    <!-- Bottom Controls Bar (Route List when active) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="12dp"
-        android:gravity="center_vertical">
-
-        <Button
-            android:id="@+id/btnRouteList"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="@string/map_btn_routes"
-            android:textSize="11sp"
-            android:textColor="#FFFFFF"
-            android:background="#1565C0"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:elevation="4dp"
-            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Destination Popup Bottom Card (When long-pressed on map) -->
@@ -564,6 +555,23 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnClearAllRoutes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_clear_all_imported"
+                android:textColor="#EF4444"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:background="#33EF4444"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginEnd="8dp" />
 
             <ImageView
                 android:id="@+id/btnCloseRouteList"

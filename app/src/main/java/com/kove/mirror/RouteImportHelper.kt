@@ -19,6 +19,28 @@ object RouteImportHelper {
     )
 
     /**
+     * Parses full KML/KMZ documents with styles, POIs, colors, and descriptions.
+     */
+    fun parseKmlDocument(context: Context, uri: Uri): KmlDocument? {
+        val fileName = getFileName(context, uri)
+        val ext = fileName.substringAfterLast('.', "").lowercase()
+
+        return when (ext) {
+            "kml" -> context.contentResolver.openInputStream(uri)?.use { KmlParser.parseKml(it) }
+            "kmz" -> context.contentResolver.openInputStream(uri)?.use { KmlParser.parseKmz(it, context) }
+            else -> {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val bytes = stream.readBytes()
+                    val text = String(bytes).trim()
+                    if (text.contains("<kml", ignoreCase = true)) {
+                        KmlParser.parseKml(bytes.inputStream())
+                    } else null
+                }
+            }
+        }
+    }
+
+    /**
      * Detects format from URI and parses accordingly.
      * Returns a list of routes (a single file may contain multiple tracks).
      */
@@ -28,16 +50,26 @@ object RouteImportHelper {
 
         return when (ext) {
             "gpx" -> context.contentResolver.openInputStream(uri)?.use { parseGpx(it) } ?: emptyList()
-            "kml" -> context.contentResolver.openInputStream(uri)?.use { parseKml(it) } ?: emptyList()
-            "kmz" -> context.contentResolver.openInputStream(uri)?.use { parseKmz(it) } ?: emptyList()
+            "kml", "kmz" -> {
+                val doc = parseKmlDocument(context, uri)
+                doc?.placemarks?.mapNotNull { pm ->
+                    if (pm.points.isNotEmpty()) {
+                        ParsedRoute(name = pm.name.ifEmpty { "KML Track" }, points = pm.points)
+                    } else null
+                } ?: emptyList()
+            }
             else -> {
-                // Try to detect from content; fallback to GPX
                 context.contentResolver.openInputStream(uri)?.use { stream ->
                     val bytes = stream.readBytes()
                     val text = String(bytes).trim()
                     when {
                         text.contains("<gpx", ignoreCase = true) -> parseGpx(bytes.inputStream())
-                        text.contains("<kml", ignoreCase = true) -> parseKml(bytes.inputStream())
+                        text.contains("<kml", ignoreCase = true) -> {
+                            val doc = KmlParser.parseKml(bytes.inputStream())
+                            doc.placemarks.mapNotNull { pm ->
+                                if (pm.points.isNotEmpty()) ParsedRoute(pm.name, pm.points) else null
+                            }
+                        }
                         else -> emptyList()
                     }
                 } ?: emptyList()

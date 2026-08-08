@@ -209,8 +209,10 @@
     <string name="map_route_preview">Προεπισκόπηση:</string>
     <string name="map_route_toggle_visibility">Εναλλαγή Ορατότητας</string>
     <string name="map_route_delete">Διαγραφή Διαδρομής</string>
-    <string name="map_import_success">✅ Εισαγωγή %1$d διαδρομής(-ών)</string>
+    <string name="btn_clear_all_imported">🗑️ Καθαρισμός Όλων</string>
+    <string name="map_import_success">✅ Εισήχθησαν %1$d διαδρομή(ές)</string>
     <string name="map_import_no_routes">⚠️ Δεν βρέθηκαν διαδρομές στο αρχείο</string>
+    <string name="map_import_unsupported_format">⚠️ Μη υποστηριζόμενη μορφή αρχείου (%1$s). Παρακαλώ επιλέξτε αρχείο .gpx, .kml ή .kmz.</string>
     <string name="map_import_error">❌ Σφάλμα εισαγωγής: %1$s</string>
     <string name="map_gps_permission_denied">⚠️ Η άδεια τοποθεσίας απορρίφθηκε</string>
     <string name="map_waiting_gps">📍 Αναμονή για σήμα GPS…</string>

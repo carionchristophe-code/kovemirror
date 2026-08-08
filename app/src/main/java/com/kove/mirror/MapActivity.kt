@@ -145,6 +145,9 @@ class MapActivity : AppCompatActivity() {
     )
 
     private val loadedRoutes = mutableListOf<LoadedRoute>()
+    private val kmlMarkers = mutableListOf<Marker>()
+    private val kmlPolygons = mutableListOf<org.osmdroid.views.overlay.Polygon>()
+    private val loadedKmlPlacemarks = mutableListOf<KmlPlacemark>()
     private var nextColorIndex = 0
 
     // ─── Tile Sources ───────────────────────────────────────────
@@ -1128,6 +1131,11 @@ class MapActivity : AppCompatActivity() {
             routeListContainer.visibility = View.GONE
         }
 
+        // Clear all imported routes, POIs, and overlays
+        findViewById<View>(R.id.btnClearAllRoutes)?.setOnClickListener {
+            clearAllImportedOverlays()
+        }
+
         // Map Settings Button (Theme & Cursor)
         findViewById<View>(R.id.btnMapSettings).setOnClickListener {
             showMapSettingsDialog()
@@ -1357,6 +1365,7 @@ class MapActivity : AppCompatActivity() {
         if (scaleFactor != 1.0f) {
             mapView.isTilesScaledToDpi = true
         }
+        refreshPoiOverlays(scaleFactor)
         mapView.invalidate()
 
         if (currentLayer == LAYER_3D) {
@@ -2136,9 +2145,13 @@ class MapActivity : AppCompatActivity() {
                 "application/gpx+xml",
                 "application/vnd.google-earth.kml+xml",
                 "application/vnd.google-earth.kmz",
+                "application/gpx",
+                "application/kml",
+                "application/kmz",
                 "application/xml",
                 "text/xml",
-                "application/octet-stream"
+                "application/zip",
+                "application/x-zip-compressed"
             ))
         }
         @Suppress("DEPRECATION")
@@ -2149,6 +2162,10 @@ class MapActivity : AppCompatActivity() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                "application/x-map",
+                "application/octet-stream"
+            ))
         }
         @Suppress("DEPRECATION")
         startActivityForResult(intent, REQ_MAP_FILE_PICK)
@@ -2211,6 +2228,13 @@ class MapActivity : AppCompatActivity() {
     // ─── Import with Style Selection ────────────────────────────
 
     private fun showStyleDialogThenImport(uri: Uri) {
+        val fileName = getFileNameFromUri(uri) ?: ""
+        val ext = fileName.substringAfterLast('.', "").lowercase()
+        if (ext.isNotEmpty() && ext !in listOf("gpx", "kml", "kmz", "xml")) {
+            Toast.makeText(this, getString(R.string.map_import_unsupported_format, ext), Toast.LENGTH_LONG).show()
+            return
+        }
+
         val defaultColor = RouteStyleDialog.PRESET_COLORS[nextColorIndex % RouteStyleDialog.PRESET_COLORS.size]
 
         val dialog = RouteStyleDialog(this, defaultColor, 5f) { color, width ->
@@ -2221,6 +2245,99 @@ class MapActivity : AppCompatActivity() {
 
     private fun importRoute(uri: Uri, color: Int, width: Float) {
         try {
+            val scaleFactor = getSharedPreferences("kove_map_prefs", MODE_PRIVATE).getFloat("map_tiles_scale_factor", 1.0f)
+            val kmlDoc = RouteImportHelper.parseKmlDocument(this, uri)
+            if (kmlDoc != null && kmlDoc.placemarks.isNotEmpty()) {
+                var importedCount = 0
+                val allPoints = mutableListOf<GeoPoint>()
+                loadedKmlPlacemarks.addAll(kmlDoc.placemarks)
+
+                for (pm in kmlDoc.placemarks) {
+                    if (pm.geometryType == KmlGeometryType.POINT && pm.points.isNotEmpty()) {
+                        val pt = pm.points.first()
+                        allPoints.add(pt)
+
+                        val compositeBmp = PoiMarkerHelper.createCompositePoiBitmap(
+                            this,
+                            pm.name,
+                            pm.description,
+                            pm.iconBitmap,
+                            scaleFactor
+                        )
+
+                        val marker = Marker(mapView).apply {
+                            position = pt
+                            title = pm.name.ifEmpty { "POI" }
+                            snippet = pm.description
+                            icon = android.graphics.drawable.BitmapDrawable(resources, compositeBmp)
+                            setAnchor(Marker.ANCHOR_LEFT, Marker.ANCHOR_CENTER)
+
+                            setOnMarkerClickListener { m, _ ->
+                                m.showInfoWindow()
+                                if (pm.description.isNotEmpty()) {
+                                    showPoiDescriptionDialog(pm.name, pm.description, pt)
+                                }
+                                true
+                            }
+                        }
+                        kmlMarkers.add(marker)
+                        mapView.overlays.add(marker)
+                        importedCount++
+                    } else if (pm.polygons.isNotEmpty()) {
+                        for (ring in pm.polygons) {
+                            if (ring.size >= 3) {
+                                allPoints.addAll(ring)
+                                val polyColor = pm.inlineStyle?.polyColor ?: color
+                                val polygon = org.osmdroid.views.overlay.Polygon().apply {
+                                    points = ring
+                                    fillPaint.color = polyColor
+                                    outlinePaint.color = pm.inlineStyle?.lineColor ?: color
+                                    outlinePaint.strokeWidth = (pm.inlineStyle?.lineWidth ?: width) * resources.displayMetrics.density
+                                }
+                                kmlPolygons.add(polygon)
+                                mapView.overlays.add(polygon)
+                                importedCount++
+                            }
+                        }
+                    } else if (pm.points.size >= 2) {
+                        allPoints.addAll(pm.points)
+                        val lineColor = pm.inlineStyle?.lineColor ?: color
+                        val lineWidth = pm.inlineStyle?.lineWidth ?: width
+                        val polyline = Polyline().apply {
+                            setPoints(pm.points)
+                            outlinePaint.color = lineColor
+                            outlinePaint.strokeWidth = lineWidth * resources.displayMetrics.density
+                            outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                            outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                            outlinePaint.isAntiAlias = true
+                        }
+
+                        val route = LoadedRoute(
+                            name = pm.name.ifEmpty { "KML Track ${loadedRoutes.size + 1}" },
+                            points = pm.points,
+                            color = lineColor,
+                            width = lineWidth,
+                            polyline = polyline
+                        )
+
+                        loadedRoutes.add(route)
+                        mapView.overlays.add(polyline)
+                        importedCount++
+                    }
+                }
+
+                mapView.invalidate()
+                refresh3dRoutes()
+                if (allPoints.isNotEmpty()) zoomToFitPoints(allPoints)
+
+                val btnRouteList = findViewById<Button>(R.id.btnRouteList)
+                btnRouteList.visibility = if (loadedRoutes.isNotEmpty()) View.VISIBLE else View.GONE
+                Toast.makeText(this, getString(R.string.map_import_success, importedCount), Toast.LENGTH_SHORT).show()
+                refreshRouteList()
+                return
+            }
+
+            // Fallback for standard GPX files
             val parsedRoutes = RouteImportHelper.parseUri(this, uri)
 
             if (parsedRoutes.isEmpty()) {
@@ -2279,7 +2396,53 @@ class MapActivity : AppCompatActivity() {
         }
     }
 
+    private fun showPoiDescriptionDialog(title: String, descriptionHtml: String, point: GeoPoint) {
+        val formattedText = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            android.text.Html.fromHtml(descriptionHtml, android.text.Html.FROM_HTML_MODE_LEGACY)
+        } else {
+            @Suppress("DEPRECATION")
+            android.text.Html.fromHtml(descriptionHtml)
+        }
+
+        val messageView = TextView(this).apply {
+            text = formattedText
+            setPadding(32, 16, 32, 16)
+            textSize = 14f
+            setTextColor(Color.parseColor("#E2E8F0"))
+            movementMethod = android.text.method.LinkMovementMethod.getInstance()
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("📍 ${title.ifEmpty { "POI" }}")
+            .setView(messageView)
+            .setPositiveButton(R.string.btn_ok, null)
+            .setNeutralButton(R.string.nav_start_navigation) { _, _ ->
+                selectDestinationPoint(point, title)
+            }
+            .show()
+    }
+
+    private fun refreshPoiOverlays(scaleFactor: Float) {
+        val pointPlacemarks = loadedKmlPlacemarks.filter { it.geometryType == KmlGeometryType.POINT && it.points.isNotEmpty() }
+        if (pointPlacemarks.size == kmlMarkers.size) {
+            for (i in pointPlacemarks.indices) {
+                val pm = pointPlacemarks[i]
+                val marker = kmlMarkers[i]
+                val compositeBmp = PoiMarkerHelper.createCompositePoiBitmap(
+                    this,
+                    pm.name,
+                    pm.description,
+                    pm.iconBitmap,
+                    scaleFactor
+                )
+                marker.icon = android.graphics.drawable.BitmapDrawable(resources, compositeBmp)
+            }
+            mapView.invalidate()
+        }
+    }
+
     private fun refresh3dRoutes() {
+        val scaleFactor = getSharedPreferences("kove_map_prefs", MODE_PRIVATE).getFloat("map_tiles_scale_factor", 1.0f)
         val data = loadedRoutes.map {
             Map3dOverlays.RouteData(
                 name = it.name,
@@ -2290,6 +2453,18 @@ class MapActivity : AppCompatActivity() {
             )
         }
         map3d?.setRoutes(data)
+
+        val pois3d = loadedKmlPlacemarks.filter { it.geometryType == KmlGeometryType.POINT && it.points.isNotEmpty() }.map { pm ->
+            val pt = pm.points.first()
+            val compositeBmp = PoiMarkerHelper.createCompositePoiBitmap(this, pm.name, pm.description, pm.iconBitmap, scaleFactor)
+            Map3dOverlays.PoiData(
+                name = pm.name,
+                description = pm.description,
+                latLng = LatLng(pt.latitude, pt.longitude),
+                bitmap = compositeBmp
+            )
+        }
+        map3d?.setPois(pois3d)
     }
 
     private fun zoomToFitPoints(points: List<GeoPoint>) {
@@ -2378,18 +2553,44 @@ class MapActivity : AppCompatActivity() {
             itemView.findViewById<ImageView>(R.id.btnRouteDelete).setOnClickListener {
                 route.polyline?.let { mapView.overlays.remove(it) }
                 loadedRoutes.removeAt(index)
-                mapView.invalidate()
-                refresh3dRoutes()
-                refreshRouteList()
 
                 if (loadedRoutes.isEmpty()) {
-                    findViewById<Button>(R.id.btnRouteList).visibility = View.GONE
-                    findViewById<LinearLayout>(R.id.routeListContainer).visibility = View.GONE
+                    clearAllImportedOverlays()
+                } else {
+                    mapView.invalidate()
+                    refresh3dRoutes()
+                    refreshRouteList()
                 }
             }
 
             container.addView(itemView)
         }
+    }
+
+    private fun clearAllImportedOverlays() {
+        for (route in loadedRoutes) {
+            route.polyline?.let { mapView.overlays.remove(it) }
+        }
+        loadedRoutes.clear()
+
+        for (marker in kmlMarkers) {
+            mapView.overlays.remove(marker)
+        }
+        kmlMarkers.clear()
+
+        for (polygon in kmlPolygons) {
+            mapView.overlays.remove(polygon)
+        }
+        kmlPolygons.clear()
+
+        loadedKmlPlacemarks.clear()
+
+        mapView.invalidate()
+        refresh3dRoutes()
+
+        findViewById<Button>(R.id.btnRouteList).visibility = View.GONE
+        findViewById<LinearLayout>(R.id.routeListContainer).visibility = View.GONE
+        refreshRouteList()
     }
 
     // ─── Motorcycle Handlebar Buttons ────────────────────────────

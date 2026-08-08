@@ -196,8 +196,10 @@
     <string name="map_route_preview">Önizleme:</string>
     <string name="map_route_toggle_visibility">Görünürlüğü Değiştir</string>
     <string name="map_route_delete">Rotayı Sil</string>
+    <string name="btn_clear_all_imported">🗑️ Tümünü Sil</string>
     <string name="map_import_success">✅ %1$d rota içe aktarıldı</string>
     <string name="map_import_no_routes">⚠️ Dosyada rota bulunamadı</string>
+    <string name="map_import_unsupported_format">⚠️ Desteklenmeyen dosya formatı (%1$s). Lütfen .gpx, .kml veya .kmz dosyası seçin.</string>
     <string name="map_import_error">❌ İçe aktarma hatası: %1$s</string>
     <string name="map_gps_permission_denied">⚠️ Konum izni reddedildi</string>
     <string name="map_waiting_gps">📍 GPS sinyali bekleniyor…</string>

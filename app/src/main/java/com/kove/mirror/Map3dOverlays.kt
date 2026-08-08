@@ -47,6 +47,21 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
     private var locationSource: GeoJsonSource? = null
     private var destinationSource: GeoJsonSource? = null
 
+    data class PoiData(
+        val name: String,
+        val description: String,
+        val latLng: LatLng,
+        val bitmap: Bitmap?
+    )
+
+    private var pois: List<PoiData> = emptyList()
+    private var poisSource: GeoJsonSource? = null
+
+    fun setPois(poiList: List<PoiData>) {
+        pois = poiList
+        refreshPois()
+    }
+
     fun onStyleLoaded(style: Style) {
         this.style = style
 
@@ -58,6 +73,17 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
                     PropertyFactory.lineWidth(Expression.get("width")),
                     PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                     PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
+                )
+        )
+
+        poisSource = GeoJsonSource("kove-pois-3d").also { style.addSource(it) }
+        style.addLayer(
+            SymbolLayer("kove-pois-layer", "kove-pois-3d")
+                .withProperties(
+                    PropertyFactory.iconImage(Expression.get("iconId")),
+                    PropertyFactory.iconSize(1f),
+                    PropertyFactory.iconAnchor(Property.ICON_ANCHOR_LEFT),
+                    PropertyFactory.iconAllowOverlap(true)
                 )
         )
 
@@ -128,6 +154,7 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
         )
 
         refreshRoutes()
+        refreshPois()
         refreshNav()
         refreshTrack()
         refreshLocation()
@@ -236,6 +263,25 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
             emptyList<Feature>()
         } else {
             listOf(Feature.fromGeometry(Point.fromLngLat(dest.longitude, dest.latitude)))
+        }
+        source.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    private fun refreshPois() {
+        val source = poisSource ?: return
+        val currentStyle = style ?: return
+        val features = mutableListOf<Feature>()
+
+        pois.forEachIndexed { index, poi ->
+            val iconId = "kove-poi-icon-$index"
+            if (poi.bitmap != null) {
+                currentStyle.addImage(iconId, poi.bitmap)
+            }
+            val point = Point.fromLngLat(poi.latLng.longitude, poi.latLng.latitude)
+            val feature = Feature.fromGeometry(point)
+            feature.addStringProperty("iconId", iconId)
+            feature.addStringProperty("name", poi.name)
+            features.add(feature)
         }
         source.setGeoJson(FeatureCollection.fromFeatures(features))
     }

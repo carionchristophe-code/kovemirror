@@ -210,8 +210,10 @@
     <string name="map_route_preview">Anteprima:</string>
     <string name="map_route_toggle_visibility">Mostra/Nascondi</string>
     <string name="map_route_delete">Elimina Percorso</string>
-    <string name="map_import_success">✅ Importati %1$d percorsi</string>
+    <string name="btn_clear_all_imported">🗑️ Cancella Tutto</string>
+    <string name="map_import_success">✅ Importata/e %1$d percorso/i</string>
     <string name="map_import_no_routes">⚠️ Nessun percorso trovato nel file</string>
+    <string name="map_import_unsupported_format">⚠️ Formato file non supportato (%1$s). Seleziona un file .gpx, .kml o .kmz.</string>
     <string name="map_import_error">❌ Errore di importazione: %1$s</string>
     <string name="map_gps_permission_denied">⚠️ Permesso di posizione negato</string>
     <string name="map_waiting_gps">📍 In attesa del segnale GPS…</string>
