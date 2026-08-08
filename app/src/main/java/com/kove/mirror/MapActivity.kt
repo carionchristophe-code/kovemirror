@@ -112,6 +112,7 @@ class MapActivity : AppCompatActivity() {
     private var lastRecalculateTimeMs = 0L
     private var currentNavigationRoute: NavigationHelper.NavigationRoute? = null
     private var initialTotalDurationSeconds: Double = 0.0
+    private var lastKnownSegmentIndex: Int = 0
 
     // ─── GPX Track Recording ─────────────────────────────────────
     private var isRecordingTrack = false
@@ -829,12 +830,52 @@ class MapActivity : AppCompatActivity() {
     private fun updateNavigationUi(currentLocation: GeoPoint) {
         val route = currentNavigationRoute ?: return
         val dest = selectedDestination ?: return
+        val pts = route.geometryPoints
+        val hasValidLocation = currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0
 
-        val remainingDistMeters = if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
-            val routeRem = NavigationHelper.calculateRemainingRouteDistanceMeters(currentLocation, route.geometryPoints)
-            if (routeRem > 0.0 && routeRem <= route.totalDistanceMeters * 1.5) routeRem else route.totalDistanceMeters
-        } else {
-            route.totalDistanceMeters
+        // ── Single windowed segment scan (fixes #3 double scan & #4 O(n) perf) ──
+        var nearestSegIndex = lastKnownSegmentIndex
+        var minSegDist = Double.MAX_VALUE
+        var remainingDistMeters = route.totalDistanceMeters
+
+        if (hasValidLocation && pts.size > 1) {
+            // Search window: from (last - 5) to (last + 50), clamped to valid range
+            val searchStart = (lastKnownSegmentIndex - 5).coerceAtLeast(0)
+            val searchEnd = (lastKnownSegmentIndex + 50).coerceAtMost(pts.size - 2)
+
+            for (i in searchStart..searchEnd) {
+                val segDist = NavigationHelper.distanceToSegmentMeters(
+                    currentLocation, pts[i], pts[i + 1]
+                )
+                if (segDist < minSegDist) {
+                    minSegDist = segDist
+                    nearestSegIndex = i
+                }
+            }
+
+            // If windowed search yielded a very large distance, do a full scan as fallback
+            if (minSegDist > 200.0) {
+                for (i in 0 until pts.size - 1) {
+                    val segDist = NavigationHelper.distanceToSegmentMeters(
+                        currentLocation, pts[i], pts[i + 1]
+                    )
+                    if (segDist < minSegDist) {
+                        minSegDist = segDist
+                        nearestSegIndex = i
+                    }
+                }
+            }
+
+            lastKnownSegmentIndex = nearestSegIndex
+
+            // Calculate remaining distance from nearest segment to end of polyline
+            var remMeters = currentLocation.distanceToAsDouble(pts[nearestSegIndex + 1])
+            for (i in (nearestSegIndex + 1) until pts.size - 1) {
+                remMeters += pts[i].distanceToAsDouble(pts[i + 1])
+            }
+            if (remMeters > 0.0 && remMeters <= route.totalDistanceMeters * 1.5) {
+                remainingDistMeters = remMeters
+            }
         }
 
         if (remainingDistMeters < 30.0) {
@@ -844,9 +885,8 @@ class MapActivity : AppCompatActivity() {
         }
 
         // Automatic rerouting if off-route (> 50m)
-        val offRouteDist = NavigationHelper.distanceToPolylineMeters(currentLocation, route.geometryPoints)
         val now = System.currentTimeMillis()
-        if (offRouteDist > 50.0 && !isRecalculatingRoute && (now - lastRecalculateTimeMs > 5000L)) {
+        if (minSegDist > 50.0 && !isRecalculatingRoute && (now - lastRecalculateTimeMs > 5000L)) {
             recalculateRoute(currentLocation, dest)
             return
         }
@@ -886,25 +926,11 @@ class MapActivity : AppCompatActivity() {
         val remStr = formatDurationText(remMin)
         tvTotalEta.text = getString(R.string.label_remaining_time, remStr, remKm)
 
-        // Dynamically trim passed route polyline ahead of current position
-        if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0 && route.geometryPoints.size > 1) {
-            var nearestIndex = 0
-            var minDist = Double.MAX_VALUE
-            for (i in 0 until route.geometryPoints.size - 1) {
-                val segDist = NavigationHelper.distanceToSegmentMeters(
-                    currentLocation,
-                    route.geometryPoints[i],
-                    route.geometryPoints[i + 1]
-                )
-                if (segDist < minDist) {
-                    minDist = segDist
-                    nearestIndex = i
-                }
-            }
-
+        // Dynamically trim passed route polyline ahead of current position (uses single scan result)
+        if (hasValidLocation && pts.size > 1) {
             val remainingPoints = mutableListOf(currentLocation)
-            for (i in (nearestIndex + 1) until route.geometryPoints.size) {
-                remainingPoints.add(route.geometryPoints[i])
+            for (i in (nearestSegIndex + 1) until pts.size) {
+                remainingPoints.add(pts[i])
             }
 
             navigationPolyline?.setPoints(remainingPoints)
@@ -960,7 +986,7 @@ class MapActivity : AppCompatActivity() {
                     navigationPolyline = Polyline().apply {
                         setPoints(newRoute.geometryPoints)
                         outlinePaint.color = Color.parseColor("#2563EB")
-                        outlinePaint.strokeWidth = 7f * resources.displayMetrics.density
+                        outlinePaint.strokeWidth = getZoomScaledLineWidthPx(5.5f)
                         outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
                         outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
                         outlinePaint.isAntiAlias = true
@@ -968,6 +994,7 @@ class MapActivity : AppCompatActivity() {
                     mapView.overlays.add(navigationPolyline)
                     mapView.invalidate()
 
+                    lastKnownSegmentIndex = 0
                     isRecalculatingRoute = false
                     updateNavigationUi(start)
                 }
@@ -1657,8 +1684,36 @@ class MapActivity : AppCompatActivity() {
                         }
                         val speedKmH = (location.speed * 3.6f).toInt().coerceAtLeast(0)
                         val altText = if (location.hasAltitude()) "${location.altitude.toInt()} m" else "--- m"
+
+                        SpeedLimitHelper.getSpeedLimit(location.latitude, location.longitude) { speedLimit ->
+                            val signLayout = findViewById<View>(R.id.layoutSpeedLimitSign)
+                            val tvLimit = findViewById<TextView>(R.id.tvSpeedLimit)
+                            val gpsCard = findViewById<View>(R.id.gpsInfoCard)
+                            val tvSpeed = findViewById<TextView>(R.id.tvGpsSpeed)
+                            val tvUnit = findViewById<TextView>(R.id.tvGpsSpeedUnit)
+
+                            if (speedLimit != null && speedLimit > 0) {
+                                signLayout?.visibility = View.VISIBLE
+                                tvLimit?.text = "$speedLimit"
+                                if (speedKmH > speedLimit) {
+                                    gpsCard?.setBackgroundResource(R.drawable.bg_speedometer_alert)
+                                    tvSpeed?.setTextColor(Color.WHITE)
+                                    tvUnit?.setTextColor(Color.WHITE)
+                                } else {
+                                    gpsCard?.setBackgroundResource(R.drawable.bg_speedometer_card)
+                                    tvSpeed?.setTextColor(Color.parseColor("#38BDF8"))
+                                    tvUnit?.setTextColor(Color.parseColor("#94A3B8"))
+                                }
+                            } else {
+                                signLayout?.visibility = View.GONE
+                                gpsCard?.setBackgroundResource(R.drawable.bg_speedometer_card)
+                                tvSpeed?.setTextColor(Color.parseColor("#38BDF8"))
+                                tvUnit?.setTextColor(Color.parseColor("#94A3B8"))
+                            }
+                        }
+
                         runOnUiThread {
-                            findViewById<TextView>(R.id.tvGpsSpeed)?.text = "$speedKmH km/h"
+                            findViewById<TextView>(R.id.tvGpsSpeed)?.text = "$speedKmH"
                             findViewById<TextView>(R.id.tvGpsAltitude)?.text = altText
                         }
                         if (isNavigating) {

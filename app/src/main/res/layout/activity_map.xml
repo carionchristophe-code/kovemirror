@@ -350,7 +350,7 @@
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
-    <!-- Bottom-Left GPS Info Overlay (Speed & Altitude) -->
+    <!-- Bottom-Left Speedometer & Speed Limit Sign -->
     <LinearLayout
         android:id="@+id/gpsInfoCard"
         android:layout_width="wrap_content"
@@ -358,42 +358,79 @@
         android:layout_gravity="bottom|start"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#CC0F172A"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:paddingTop="5dp"
-        android:paddingBottom="5dp"
+        android:background="@drawable/bg_speedometer_card"
+        android:paddingStart="8dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
         android:layout_marginStart="10dp"
         android:layout_marginBottom="12dp"
         android:visibility="gone"
-        android:elevation="6dp">
+        android:elevation="8dp">
 
-        <TextView
-            android:id="@+id/tvGpsSpeed"
+        <!-- European Speed Limit Sign (Red Circle with White Center) -->
+        <FrameLayout
+            android:id="@+id/layoutSpeedLimitSign"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_speed_limit_sign"
+            android:layout_marginEnd="10dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvSpeedLimit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="90"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+        </FrameLayout>
+
+        <!-- Current Speed & Altitude Column -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 km/h"
-            android:textColor="#38BDF8"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:includeFontPadding="false" />
+            android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=" • "
-            android:textColor="#64748B"
-            android:textSize="11sp"
-            android:includeFontPadding="false" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tvGpsAltitude"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="--- m"
-            android:textColor="#E2E8F0"
-            android:textSize="11sp"
-            android:includeFontPadding="false" />
+                <TextView
+                    android:id="@+id/tvGpsSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#38BDF8"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <TextView
+                    android:id="@+id/tvGpsSpeedUnit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" km/h"
+                    android:textColor="#94A3B8"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvGpsAltitude"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--- m"
+                android:textColor="#94A3B8"
+                android:textSize="10sp"
+                android:includeFontPadding="false" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Bottom Controls Bar (Route List when active) -->

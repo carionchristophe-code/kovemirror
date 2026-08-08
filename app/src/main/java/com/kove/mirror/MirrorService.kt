@@ -182,8 +182,8 @@ class MirrorService : Service() {
                 }
             }, null)
 
-            val savedMac = getSharedPreferences("kove_prefs", MODE_PRIVATE).getString("bt_mac", "")
-            if (!savedMac.isNullOrEmpty()) {
+            val savedMac = getOrAutoSelectBtMac()
+            if (savedMac.isNotEmpty()) {
                 bleManager = BleManager(this) { msg ->
                     DebugLogger.log(LogLevel.INFO, msg)
                 }
@@ -225,8 +225,8 @@ class MirrorService : Service() {
             )
             wakeLock?.acquire()
 
-            val savedMac = getSharedPreferences("kove_prefs", MODE_PRIVATE).getString("bt_mac", "")
-            if (!savedMac.isNullOrEmpty()) {
+            val savedMac = getOrAutoSelectBtMac()
+            if (savedMac.isNotEmpty()) {
                 bleManager = BleManager(this) { msg ->
                     DebugLogger.log(LogLevel.INFO, msg)
                 }
@@ -466,5 +466,32 @@ class MirrorService : Service() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(ch)
         }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun getOrAutoSelectBtMac(): String {
+        val prefs = getSharedPreferences("kove_prefs", MODE_PRIVATE)
+        var savedMac = prefs.getString("bt_mac", "")
+        if (savedMac.isNullOrEmpty()) {
+            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            if (adapter != null && adapter.isEnabled) {
+                try {
+                    val bonded = adapter.bondedDevices
+                    val cqkyDev = bonded?.firstOrNull { dev ->
+                        val name = dev.name ?: ""
+                        val mac = dev.address ?: ""
+                        name.startsWith("CQKY", ignoreCase = true) ||
+                        mac.startsWith("CQKY", ignoreCase = true) ||
+                        name.contains("CQKY", ignoreCase = true)
+                    }
+                    if (cqkyDev != null) {
+                        savedMac = cqkyDev.address
+                        prefs.edit().putString("bt_mac", savedMac).apply()
+                        DebugLogger.info("🏍️ Auto-selected Kove Bluetooth device: ${cqkyDev.name ?: savedMac} (${cqkyDev.address})")
+                    }
+                } catch (_: SecurityException) {}
+            }
+        }
+        return savedMac ?: ""
     }
 }
