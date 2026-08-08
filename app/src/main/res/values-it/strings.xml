@@ -179,6 +179,7 @@
     <string name="toast_select_offline_map">Seleziona un file OpenAndroMaps (.map)</string>
     <string name="toast_offline_map_loaded">✅ Mappa offline caricata: %1$s</string>
     <string name="error_invalid_map_file">❌ File .map non valido o non leggibile</string>
+    <string name="map_label_scale_title">🔤 Dimensione Testo Mappa</string>
     <string name="map_layer_osm">🗺️ OSM</string>
     <string name="map_layer_satellite">🛰️ Satellite</string>
     <string name="map_btn_import">📂 Importa</string>
@@ -225,7 +226,7 @@
     <string name="label_cursor_color">Colore Cursore:</string>
     <string name="label_cursor_preview">Anteprima Cursore:</string>
     <string name="label_recording_color">Colore Registrazione Traccia:</string>
-    <string name="btn_open_tft_padding">🖼️ Padding Settings</string>
+    <string name="btn_open_tft_padding">🖼️ Impostazioni Bordo TFT</string>
     <string name="cursor_shape_arrow">⬆️ Freccia Navigazione</string>
     <string name="cursor_shape_motorcycle">🏍️ Motocicletta</string>
     <string name="cursor_shape_circle">🟢 Punto Circolare</string>
@@ -247,12 +248,24 @@
 
     <!-- Turn-by-Turn Navigation -->
     <string name="nav_start_navigation">▶ Avvia Navigazione</string>
+    <string name="nav_route_options">⚙️ Opzioni</string>
+    <string name="nav_avoid_tolls">Evita Pedaggi (Senza Pedaggio)</string>
+    <string name="nav_avoid_highways">Evita Autostrade (Senza Autostrada)</string>
+    <string name="nav_route_preference">Preferenza Percorso:</string>
+    <string name="nav_type_fastest">⚡ Più Veloce</string>
+    <string name="nav_type_shortest">📏 Più Breve</string>
     <string name="nav_stop">Arresta</string>
     <string name="nav_destination_selected">📍 Destinazione Selezionata</string>
     <string name="nav_arrived">🎉 Arrivato a destinazione!</string>
     <string name="nav_calculating">Calcolo percorso…</string>
     <string name="nav_recalculating">Ricalcolo percorso…</string>
-    <string name="nav_rem_format">Rimanente: %1$.1f km (%2$d min)</string>
+    <string name="nav_rem_format">Rimanente: %1$s (%2$.1f km)</string>
+    <string name="label_initial_total_time">Totale: %1$s</string>
+    <string name="label_remaining_time">Rimanente: %1$s (%2$.1f km)</string>
+    <string name="unit_hours">o</string>
+    <string name="unit_minutes">min</string>
+    <string name="duration_format_hours_mins">%1$d %2$s %3$d %4$s</string>
+    <string name="duration_format_mins">%1$d %2$s</string>
 
     <!-- App Mode Selection -->
     <string name="label_app_mode">🎮 Modalità App:</string>
@@ -302,7 +315,7 @@
     <string name="toast_my_location">📍 Torna alla mia posizione</string>
 
     <!-- TFT Frame Fit Dialog -->
-    <string name="btn_tft_fit">Padding Settings</string>
+    <string name="btn_tft_fit">Impostazioni Bordo TFT</string>
     <string name="btn_tft_padding_settings">📺 Impostazioni Bordo Nero TFT</string>
     <string name="tft_fit_dialog_title">📺 Regolazione Cornice TFT</string>
     <string name="tft_fit_dialog_description">Regola le altezze delle barre nere superiore e inferiore per allineare la mappa con il display TFT della moto:</string>

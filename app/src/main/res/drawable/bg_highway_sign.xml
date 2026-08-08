@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#006A4E" /> <!-- US Interstate Highway Guide Sign Green -->
+    <stroke
+        android:width="2dp"
+        android:color="#FFFFFF" /> <!-- High-contrast Highway Sign White Border -->
+    <corners android:radius="8dp" />
+</shape>

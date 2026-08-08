@@ -127,17 +127,19 @@
             </HorizontalScrollView>
         </LinearLayout>
 
-    <!-- Top Turn Banner (Active during Navigation), placed below the top bar -->
+    <!-- Top Turn Banner (Active during Navigation), US Highway Guide Sign Theme -->
     <LinearLayout
         android:id="@+id/navBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#E60F172A"
+        android:background="@drawable/bg_highway_sign"
         android:padding="12dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="48dp"
         android:visibility="gone"
         android:layout_gravity="top"
-        android:layout_marginTop="44dp"
         android:elevation="10dp">
 
         <LinearLayout
@@ -148,11 +150,12 @@
 
             <TextView
                 android:id="@+id/tvTurnIcon"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="⬆️"
                 android:textSize="28sp"
-                android:gravity="center" />
+                android:gravity="center"
+                android:includeFontPadding="false" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -175,8 +178,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="in 200 m"
-                    android:textColor="#38BDF8"
-                    android:textSize="13sp" />
+                    android:textColor="#FCD34D"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <Button
@@ -186,21 +190,47 @@
                 android:text="@string/nav_stop"
                 android:textSize="11sp"
                 android:textColor="#FFFFFF"
-                android:background="#B71C1C"
+                android:background="#DC2626"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvTotalDistanceEta"
+        <!-- White Divider Line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#66FFFFFF"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="6dp" />
+
+        <!-- Total Time & Remaining Time / Distance Bar -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Remaining: -- km"
-            android:textColor="#94A3B8"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvInitialTotalDuration"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total: -- min"
+                android:textColor="#E2E8F0"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvTotalDistanceEta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Remaining: -- min (0.0 km)"
+                android:textColor="#FCD34D"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Right side controls: Zoom + Location + GPS + Record + Import -->

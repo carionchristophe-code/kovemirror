@@ -178,6 +178,7 @@
     <string name="toast_select_offline_map">Please select an OpenAndroMaps (.map) file</string>
     <string name="toast_offline_map_loaded">✅ Offline map loaded: %1$s</string>
     <string name="error_invalid_map_file">❌ Invalid or unreadable .map file</string>
+    <string name="map_label_scale_title">🔤 Map Text &amp; Label Size</string>
     <string name="map_layer_osm">🗺️ OSM</string>
     <string name="map_layer_satellite">🛰️ Satellite</string>
     <string name="map_btn_import">📂 Import</string>
@@ -246,12 +247,24 @@
 
     <!-- Turn-by-Turn Navigation -->
     <string name="nav_start_navigation">▶ Start Navigation</string>
+    <string name="nav_route_options">⚙️ Options</string>
+    <string name="nav_avoid_tolls">Avoid Tolls (Toll-Free)</string>
+    <string name="nav_avoid_highways">Avoid Highways (No Highway)</string>
+    <string name="nav_route_preference">Route Preference:</string>
+    <string name="nav_type_fastest">⚡ Fastest Route</string>
+    <string name="nav_type_shortest">📏 Shortest Route</string>
     <string name="nav_stop">Stop</string>
     <string name="nav_destination_selected">📍 Destination Selected</string>
     <string name="nav_arrived">🎉 Arrived at destination!</string>
     <string name="nav_calculating">Calculating route…</string>
     <string name="nav_recalculating">Recalculating route…</string>
-    <string name="nav_rem_format">Remaining: %1$.1f km (%2$d min)</string>
+    <string name="nav_rem_format">Remaining: %1$s (%2$.1f km)</string>
+    <string name="label_initial_total_time">Total: %1$s</string>
+    <string name="label_remaining_time">Remaining: %1$s (%2$.1f km)</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_minutes">min</string>
+    <string name="duration_format_hours_mins">%1$d %2$s %3$d %4$s</string>
+    <string name="duration_format_mins">%1$d %2$s</string>
 
     <!-- App Mode Selection -->
     <string name="label_app_mode">🎮 App Mode:</string>

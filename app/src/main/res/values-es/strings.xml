@@ -178,6 +178,7 @@
     <string name="toast_select_offline_map">Por favor seleccione un archivo OpenAndroMaps (.map)</string>
     <string name="toast_offline_map_loaded">✅ Mapa sin conexión cargado: %1$s</string>
     <string name="error_invalid_map_file">❌ Archivo .map no válido o ilegible</string>
+    <string name="map_label_scale_title">🔤 Tamaño de Texto del Mapa</string>
     <string name="map_layer_osm">🗺️ OSM</string>
     <string name="map_layer_satellite">🛰️ Satélite</string>
     <string name="map_btn_import">📂 Importar</string>
@@ -224,7 +225,7 @@
     <string name="label_cursor_color">Color del Cursor:</string>
     <string name="label_cursor_preview">Vista Previa:</string>
     <string name="label_recording_color">Color de Grabación de Ruta:</string>
-    <string name="btn_open_tft_padding">🖼️ Padding Settings</string>
+    <string name="btn_open_tft_padding">🖼️ Ajustes de Margen TFT</string>
     <string name="cursor_shape_arrow">⬆️ Flecha de Navegación</string>
     <string name="cursor_shape_motorcycle">🏍️ Motocicleta</string>
     <string name="cursor_shape_circle">🟢 Punto Circular</string>
@@ -244,14 +245,26 @@
     <string name="btn_stop_and_save">Detener y Guardar</string>
     <string name="btn_keep_recording">Continuar Grabando</string>
 
-    <!-- Turn-by-Turn Navegación -->
+    <!-- Turn-by-Turn Navigation -->
     <string name="nav_start_navigation">▶ Iniciar Navegación</string>
+    <string name="nav_route_options">⚙️ Opciones</string>
+    <string name="nav_avoid_tolls">Evitar Peajes (Sin Peaje)</string>
+    <string name="nav_avoid_highways">Evitar Autopistas (Sin Autopista)</string>
+    <string name="nav_route_preference">Preferencia de Ruta:</string>
+    <string name="nav_type_fastest">⚡ Más Rápida</string>
+    <string name="nav_type_shortest">📏 Más Corta</string>
     <string name="nav_stop">Detener</string>
     <string name="nav_destination_selected">📍 Destino Seleccionado</string>
     <string name="nav_arrived">🎉 ¡Has llegado a tu destino!</string>
     <string name="nav_calculating">Calculando ruta…</string>
     <string name="nav_recalculating">Recalculando ruta…</string>
-    <string name="nav_rem_format">Restante: %1$.1f km (%2$d min)</string>
+    <string name="nav_rem_format">Restante: %1$s (%2$.1f km)</string>
+    <string name="label_initial_total_time">Total: %1$s</string>
+    <string name="label_remaining_time">Restante: %1$s (%2$.1f km)</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_minutes">min</string>
+    <string name="duration_format_hours_mins">%1$d %2$s %3$d %4$s</string>
+    <string name="duration_format_mins">%1$d %2$s</string>
 
     <!-- Selección de Modo -->
     <string name="label_app_mode">🎮 Modo de Aplicación:</string>
@@ -301,7 +314,7 @@
     <string name="toast_my_location">📍 Volver a mi ubicación</string>
 
     <!-- TFT Frame Fit Dialog -->
-    <string name="btn_tft_fit">Padding Settings</string>
+    <string name="btn_tft_fit">Ajustes de Margen TFT</string>
     <string name="btn_tft_padding_settings">📺 Ajustes de Barra Negra TFT</string>
     <string name="tft_fit_dialog_title">📺 Ajuste de Marco TFT</string>
     <string name="tft_fit_dialog_description">Ajuste las alturas de las barras negras superior e inferior para alinear el mapa con la pantalla TFT:</string>

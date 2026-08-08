@@ -670,16 +670,36 @@ private fun showTftPaddingDialog() {
     @SuppressLint("MissingPermission")
     private fun setupBluetoothButton() {
         fun updateBtButtonText() {
-            val savedMac = getSharedPreferences("kove_prefs", MODE_PRIVATE).getString("bt_mac", "")
+            val prefs = getSharedPreferences("kove_prefs", MODE_PRIVATE)
+            var savedMac = prefs.getString("bt_mac", "")
             val adapter = BluetoothAdapter.getDefaultAdapter()
             var displayName = getString(R.string.bt_device_none)
 
-            if (!savedMac.isNullOrEmpty() && adapter != null && adapter.isEnabled) {
+            if (adapter != null && adapter.isEnabled) {
                 try {
                     val bonded = adapter.bondedDevices
-                    val dev = bonded?.firstOrNull { it.address == savedMac }
-                    if (dev != null) {
-                        displayName = dev.name ?: savedMac
+
+                    // Auto-select CQKY Bluetooth device if no device was previously saved
+                    if (savedMac.isNullOrEmpty() && bonded != null) {
+                        val cqkyDev = bonded.firstOrNull { dev ->
+                            val name = dev.name ?: ""
+                            val mac = dev.address ?: ""
+                            name.startsWith("CQKY", ignoreCase = true) ||
+                            mac.startsWith("CQKY", ignoreCase = true) ||
+                            name.contains("CQKY", ignoreCase = true)
+                        }
+                        if (cqkyDev != null) {
+                            savedMac = cqkyDev.address
+                            prefs.edit().putString("bt_mac", savedMac).apply()
+                            DebugLogger.info("🏍️ Auto-selected Kove Bluetooth device: ${cqkyDev.name ?: savedMac} (${cqkyDev.address})")
+                        }
+                    }
+
+                    if (!savedMac.isNullOrEmpty() && bonded != null) {
+                        val dev = bonded.firstOrNull { it.address == savedMac }
+                        if (dev != null) {
+                            displayName = dev.name ?: savedMac
+                        }
                     }
                 } catch (_: SecurityException) {}
             }

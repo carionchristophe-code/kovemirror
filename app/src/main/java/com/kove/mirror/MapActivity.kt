@@ -111,6 +111,7 @@ class MapActivity : AppCompatActivity() {
     private var isRecalculatingRoute = false
     private var lastRecalculateTimeMs = 0L
     private var currentNavigationRoute: NavigationHelper.NavigationRoute? = null
+    private var initialTotalDurationSeconds: Double = 0.0
 
     // ─── GPX Track Recording ─────────────────────────────────────
     private var isRecordingTrack = false
@@ -300,6 +301,9 @@ class MapActivity : AppCompatActivity() {
 
         applyMapTheme()
 
+        val savedScale = prefs.getFloat("map_tiles_scale_factor", 1.0f)
+        applyMapTileScale(savedScale)
+
         mapView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             update2dCameraPadding()
         }
@@ -440,8 +444,11 @@ class MapActivity : AppCompatActivity() {
     }
 
     private fun createRasterStyleBuilder(sourceId: String, tileUrl: String): Style.Builder {
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        val scale = prefs.getFloat("map_tiles_scale_factor", 1.0f)
+        val tileSize = if (scale > 1.0f) (256.0 / scale).toInt().coerceIn(128, 256) else 256
         return Style.Builder()
-            .withSource(RasterSource(sourceId, TileSet("2.1.0", tileUrl), 256))
+            .withSource(RasterSource(sourceId, TileSet("2.1.0", tileUrl), tileSize))
             .withLayer(
                 BackgroundLayer("$sourceId-bg").withProperties(
                     PropertyFactory.backgroundColor(Color.parseColor("#1a1a2e"))
@@ -678,12 +685,12 @@ class MapActivity : AppCompatActivity() {
         }
 
         val myLoc = locationOverlay?.myLocation
-        if (myLoc != null) {
+        if (myLoc != null && myLoc.latitude != 0.0 && myLoc.longitude != 0.0) {
             val distMeters = myLoc.distanceToAsDouble(point)
             val distKm = distMeters / 1000.0
             tvDist.text = String.format(Locale.getDefault(), "Approx: %.1f km", distKm)
         } else {
-            tvDist.text = "GPS location unknown"
+            tvDist.text = getString(R.string.map_waiting_gps)
         }
 
         destCard.visibility = View.VISIBLE
@@ -717,7 +724,7 @@ class MapActivity : AppCompatActivity() {
         }
 
         val myLoc = locationOverlay?.myLocation
-        if (myLoc == null) {
+        if (myLoc == null || (myLoc.latitude == 0.0 && myLoc.longitude == 0.0)) {
             Toast.makeText(this, getString(R.string.map_waiting_gps), Toast.LENGTH_SHORT).show()
             return
         }
@@ -734,13 +741,26 @@ class MapActivity : AppCompatActivity() {
         tvTurnDist.text = ""
         tvTotalEta.text = ""
 
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        val avoidTolls = prefs.getBoolean("nav_avoid_tolls", false)
+        val avoidHighways = prefs.getBoolean("nav_avoid_highways", false)
+        val useShortest = prefs.getBoolean("nav_use_shortest", false)
+
         NavigationHelper.fetchRoute(
             start = myLoc,
             destination = dest,
+            avoidTolls = avoidTolls,
+            avoidHighways = avoidHighways,
+            useShortest = useShortest,
             onSuccess = { route ->
                 runOnUiThread {
                     currentNavigationRoute = route
+                    initialTotalDurationSeconds = route.totalDurationSeconds
                     isNavigating = true
+
+                    val initialMin = (route.totalDurationSeconds / 60.0).toInt()
+                    val initialStr = formatDurationText(initialMin)
+                    findViewById<TextView>(R.id.tvInitialTotalDuration)?.text = getString(R.string.label_initial_total_time, initialStr)
 
                     map3d?.setNavigationRoute(
                         route.geometryPoints.map { LatLng(it.latitude, it.longitude) }
@@ -810,7 +830,13 @@ class MapActivity : AppCompatActivity() {
         val route = currentNavigationRoute ?: return
         val dest = selectedDestination ?: return
 
-        val remainingDistMeters = currentLocation.distanceToAsDouble(dest)
+        val remainingDistMeters = if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
+            val routeRem = NavigationHelper.calculateRemainingRouteDistanceMeters(currentLocation, route.geometryPoints)
+            if (routeRem > 0.0 && routeRem <= route.totalDistanceMeters * 1.5) routeRem else route.totalDistanceMeters
+        } else {
+            route.totalDistanceMeters
+        }
+
         if (remainingDistMeters < 30.0) {
             Toast.makeText(this, getString(R.string.nav_arrived), Toast.LENGTH_LONG).show()
             stopNavigation()
@@ -825,10 +851,11 @@ class MapActivity : AppCompatActivity() {
             return
         }
 
-        // Find nearest step in route
-        val nextStep = route.steps.firstOrNull { step ->
-            step.location.latitude != 0.0 && currentLocation.distanceToAsDouble(step.location) < 300.0
-        } ?: route.steps.firstOrNull()
+        // Find nearest step in route ahead of current location
+        val validSteps = route.steps.filter { it.location.latitude != 0.0 && it.location.longitude != 0.0 }
+        val nextStep = validSteps.firstOrNull { step ->
+            currentLocation.distanceToAsDouble(step.location) < 500.0
+        } ?: validSteps.firstOrNull()
 
         val tvIcon = findViewById<TextView>(R.id.tvTurnIcon)
         val tvInstruction = findViewById<TextView>(R.id.tvTurnInstruction)
@@ -838,7 +865,12 @@ class MapActivity : AppCompatActivity() {
         if (nextStep != null) {
             val distToStep = currentLocation.distanceToAsDouble(nextStep.location)
             tvInstruction.text = nextStep.instruction
-            tvTurnDist.text = if (distToStep < 1000) "${distToStep.toInt()} m" else String.format(Locale.getDefault(), "%.1f km", distToStep / 1000.0)
+
+            if (distToStep < route.totalDistanceMeters * 1.5 && nextStep.location.latitude != 0.0) {
+                tvTurnDist.text = if (distToStep < 1000) "${distToStep.toInt()} m" else String.format(Locale.getDefault(), "%.1f km", distToStep / 1000.0)
+            } else {
+                tvTurnDist.text = ""
+            }
 
             tvIcon.text = when {
                 nextStep.modifier.contains("left") -> "⬅️"
@@ -849,8 +881,49 @@ class MapActivity : AppCompatActivity() {
         }
 
         val remKm = remainingDistMeters / 1000.0
-        val remMin = (route.totalDurationSeconds / 60.0).toInt()
-        tvTotalEta.text = getString(R.string.nav_rem_format, remKm, remMin)
+        val remDurationSeconds = if (route.totalDistanceMeters > 0) (remainingDistMeters / route.totalDistanceMeters) * route.totalDurationSeconds else 0.0
+        val remMin = (remDurationSeconds / 60.0).toInt()
+        val remStr = formatDurationText(remMin)
+        tvTotalEta.text = getString(R.string.label_remaining_time, remStr, remKm)
+
+        // Dynamically trim passed route polyline ahead of current position
+        if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0 && route.geometryPoints.size > 1) {
+            var nearestIndex = 0
+            var minDist = Double.MAX_VALUE
+            for (i in 0 until route.geometryPoints.size - 1) {
+                val segDist = NavigationHelper.distanceToSegmentMeters(
+                    currentLocation,
+                    route.geometryPoints[i],
+                    route.geometryPoints[i + 1]
+                )
+                if (segDist < minDist) {
+                    minDist = segDist
+                    nearestIndex = i
+                }
+            }
+
+            val remainingPoints = mutableListOf(currentLocation)
+            for (i in (nearestIndex + 1) until route.geometryPoints.size) {
+                remainingPoints.add(route.geometryPoints[i])
+            }
+
+            navigationPolyline?.setPoints(remainingPoints)
+            mapView.invalidate()
+            map3d?.setNavigationRoute(remainingPoints.map { LatLng(it.latitude, it.longitude) })
+        }
+    }
+
+    private fun formatDurationText(minutes: Int): String {
+        val hrs = minutes / 60
+        val mins = minutes % 60
+        val unitH = getString(R.string.unit_hours)
+        val unitM = getString(R.string.unit_minutes)
+
+        return if (hrs > 0) {
+            getString(R.string.duration_format_hours_mins, hrs, unitH, mins, unitM)
+        } else {
+            getString(R.string.duration_format_mins, mins, unitM)
+        }
     }
 
     private fun recalculateRoute(start: GeoPoint, dest: GeoPoint) {
@@ -860,9 +933,17 @@ class MapActivity : AppCompatActivity() {
         val tvInstruction = findViewById<TextView>(R.id.tvTurnInstruction)
         tvInstruction?.text = getString(R.string.nav_recalculating)
 
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        val avoidTolls = prefs.getBoolean("nav_avoid_tolls", false)
+        val avoidHighways = prefs.getBoolean("nav_avoid_highways", false)
+        val useShortest = prefs.getBoolean("nav_use_shortest", false)
+
         NavigationHelper.fetchRoute(
             start = start,
             destination = dest,
+            avoidTolls = avoidTolls,
+            avoidHighways = avoidHighways,
+            useShortest = useShortest,
             onSuccess = { newRoute ->
                 runOnUiThread {
                     if (!isNavigating) {
@@ -1129,10 +1210,16 @@ class MapActivity : AppCompatActivity() {
         popup.menu.add(0, LAYER_GOOGLE_SAT, 4, getString(R.string.map_layer_google_sat))
         popup.menu.add(0, LAYER_GOOGLE_HYBRID, 5, getString(R.string.map_layer_google_hybrid))
         popup.menu.add(0, LAYER_OFFLINE, 6, getString(R.string.map_layer_offline))
+        popup.menu.add(0, 999, 7, getString(R.string.map_label_scale_title))
+        popup.menu.add(0, 998, 8, getString(R.string.nav_route_options))
 
         popup.setOnMenuItemClickListener { item ->
             val selectedLayer = item.itemId
-            if (selectedLayer == LAYER_OFFLINE && currentLayer == LAYER_OFFLINE) {
+            if (selectedLayer == 999) {
+                showMapScaleDialog()
+            } else if (selectedLayer == 998) {
+                showRouteOptionsDialog()
+            } else if (selectedLayer == LAYER_OFFLINE && currentLayer == LAYER_OFFLINE) {
                 selectOfflineMapFile()
             } else {
                 switchLayer(selectedLayer)
@@ -1234,6 +1321,122 @@ class MapActivity : AppCompatActivity() {
         btnMenu.text = "$currentLabel ▼"
         btnMenu.setBackgroundColor(if (currentLayer != LAYER_3D) activeColor else inactiveColor)
         btn3D.setBackgroundColor(if (currentLayer == LAYER_3D) activeColor else inactiveColor)
+    }
+
+    // ─── Map Text & Label Scaling ───────────────────────────────
+
+    private fun applyMapTileScale(scaleFactor: Float) {
+        mapView.tilesScaleFactor = scaleFactor
+        if (scaleFactor != 1.0f) {
+            mapView.isTilesScaledToDpi = true
+        }
+        mapView.invalidate()
+
+        if (currentLayer == LAYER_3D) {
+            apply3dBaseLayer()
+        }
+    }
+
+    private fun showMapScaleDialog() {
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        val currentScale = prefs.getFloat("map_tiles_scale_factor", 1.0f)
+
+        val scales = arrayOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+        val labels = arrayOf(
+            "%100 (Standart / Normal)",
+            "%125 (Orta / Medium)",
+            "%150 (Büyük / Large)",
+            "%175 (Çok Büyük / Extra Large)",
+            "%200 (Maksimum / 2x Large)"
+        )
+
+        val initialCheckedIndex = scales.indexOfFirst { kotlin.math.abs(it - currentScale) < 0.05f }.coerceAtLeast(0)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.map_label_scale_title)
+            .setSingleChoiceItems(labels, initialCheckedIndex) { dialog, which ->
+                val selectedScale = scales[which]
+                prefs.edit().putFloat("map_tiles_scale_factor", selectedScale).apply()
+                applyMapTileScale(selectedScale)
+                Toast.makeText(this, "${getString(R.string.map_label_scale_title)}: ${(selectedScale * 100).toInt()}%", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.map_btn_cancel, null)
+            .show()
+    }
+
+    // ─── Navigation Route Preferences (Toll-Free, No Highway, Shortest) ───
+
+    private fun showRouteOptionsDialog() {
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        val avoidTolls = prefs.getBoolean("nav_avoid_tolls", false)
+        val avoidHighways = prefs.getBoolean("nav_avoid_highways", false)
+        val useShortest = prefs.getBoolean("nav_use_shortest", false)
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 20, 40, 10)
+        }
+
+        val cbTolls = androidx.appcompat.widget.AppCompatCheckBox(this).apply {
+            text = getString(R.string.nav_avoid_tolls)
+            isChecked = avoidTolls
+            setTextColor(Color.WHITE)
+        }
+        val cbHighways = androidx.appcompat.widget.AppCompatCheckBox(this).apply {
+            text = getString(R.string.nav_avoid_highways)
+            isChecked = avoidHighways
+            setTextColor(Color.WHITE)
+        }
+
+        val tvPrefLabel = TextView(this).apply {
+            text = getString(R.string.nav_route_preference)
+            setTextColor(Color.parseColor("#38BDF8"))
+            textSize = 13f
+            setPadding(0, 20, 0, 10)
+        }
+
+        val rgPref = android.widget.RadioGroup(this).apply {
+            orientation = android.widget.RadioGroup.VERTICAL
+        }
+        val rbFastest = android.widget.RadioButton(this).apply {
+            id = View.generateViewId()
+            text = getString(R.string.nav_type_fastest)
+            isChecked = !useShortest
+            setTextColor(Color.WHITE)
+        }
+        val rbShortest = android.widget.RadioButton(this).apply {
+            id = View.generateViewId()
+            text = getString(R.string.nav_type_shortest)
+            isChecked = useShortest
+            setTextColor(Color.WHITE)
+        }
+        rgPref.addView(rbFastest)
+        rgPref.addView(rbShortest)
+
+        layout.addView(cbTolls)
+        layout.addView(cbHighways)
+        layout.addView(tvPrefLabel)
+        layout.addView(rgPref)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.nav_route_options)
+            .setView(layout)
+            .setPositiveButton(R.string.map_btn_apply) { _, _ ->
+                val newAvoidTolls = cbTolls.isChecked
+                val newAvoidHighways = cbHighways.isChecked
+                val newUseShortest = rbShortest.isChecked
+
+                prefs.edit()
+                    .putBoolean("nav_avoid_tolls", newAvoidTolls)
+                    .putBoolean("nav_avoid_highways", newAvoidHighways)
+                    .putBoolean("nav_use_shortest", newUseShortest)
+                    .apply()
+
+                Toast.makeText(this, "✅ ${getString(R.string.nav_route_options)}", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.map_btn_cancel, null)
+            .show()
     }
 
     // ─── Favorites & Geocoding ─────────────────────────────────

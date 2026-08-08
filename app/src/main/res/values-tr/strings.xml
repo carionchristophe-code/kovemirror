@@ -178,6 +178,7 @@
     <string name="toast_select_offline_map">Lütfen bir OpenAndroMaps (.map) dosyası seçin</string>
     <string name="toast_offline_map_loaded">✅ Çevrimdışı harita yüklendi: %1$s</string>
     <string name="error_invalid_map_file">❌ Geçersiz veya okunamayan .map dosyası</string>
+    <string name="map_label_scale_title">🔤 Harita Yazı / Etiket Büyüklüğü</string>
     <string name="map_layer_osm">🗺️ OSM</string>
     <string name="map_layer_satellite">🛰️ Uydu</string>
     <string name="map_btn_import">📂 İçe Aktar</string>
@@ -233,12 +234,24 @@
 
     <!-- Turn-by-Turn Navigasyon -->
     <string name="nav_start_navigation">▶ Navigasyonu Başlat</string>
+    <string name="nav_route_options">⚙️ Ayarlar</string>
+    <string name="nav_avoid_tolls">Ücretli Yol Önleme (Ücretsiz)</string>
+    <string name="nav_avoid_highways">Otoyol Önleme (Otoyolsuz)</string>
+    <string name="nav_route_preference">Rota Tercihi:</string>
+    <string name="nav_type_fastest">⚡ En Hızlı Rota</string>
+    <string name="nav_type_shortest">📏 En Kısa Rota</string>
     <string name="nav_stop">Durdur</string>
     <string name="nav_destination_selected">📍 Hedef Seçildi</string>
     <string name="nav_arrived">🎉 Hedefe ulaştınız!</string>
     <string name="nav_calculating">Rota hesaplanıyor…</string>
-    <string name="nav_recalculating">Yeni rota hesaplanıyor…</string>
-    <string name="nav_rem_format">Kalan: %1$.1f km (%2$d dk)</string>
+    <string name="nav_recalculating">Rota yeniden hesaplanıyor…</string>
+    <string name="nav_rem_format">Kalan: %1$s (%2$.1f km)</string>
+    <string name="label_initial_total_time">Toplam Süre: %1$s</string>
+    <string name="label_remaining_time">Kalan: %1$s (%2$.1f km)</string>
+    <string name="unit_hours">sa</string>
+    <string name="unit_minutes">dk</string>
+    <string name="duration_format_hours_mins">%1$d %2$s %3$d %4$s</string>
+    <string name="duration_format_mins">%1$d %2$s</string>
 
     <!-- Uygulama Modu Seçimi -->
     <string name="label_app_mode">🎮 Uygulama Modu:</string>
@@ -288,7 +301,7 @@
     <string name="toast_my_location">📍 Konumuma Dön</string>
 
     <!-- TFT Frame Fit Dialog -->
-    <string name="btn_tft_fit">Padding Settings</string>
+    <string name="btn_tft_fit">Çerçeve / Bar Ayarları</string>
     <string name="btn_tft_padding_settings">📺 TFT Siyah Bar Ayarları</string>
     <string name="tft_fit_dialog_title">📺 TFT Ekran Çerçeve Ayarı</string>
     <string name="tft_fit_dialog_description">Haritanın TFT ekranda tam gözükmesi için üst ve alt siyah bar yüksekliklerini ayarlayın:</string>
