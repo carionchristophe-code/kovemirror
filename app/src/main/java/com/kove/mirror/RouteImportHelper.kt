@@ -91,6 +91,11 @@ object RouteImportHelper {
         var inTrack = false
         var inRoute = false
         var inName = false
+        var inPoint = false
+        var inEle = false
+        var pendingLat = 0.0
+        var pendingLon = 0.0
+        var pendingEle = 0.0
         var eventType = parser.eventType
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -101,21 +106,31 @@ object RouteImportHelper {
                         "rte" -> { inRoute = true; currentPoints = mutableListOf(); currentName = "" }
                         "name" -> { if (inTrack || inRoute) inName = true }
                         "trkpt", "rtept", "wpt" -> {
-                            val lat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
-                            val lon = parser.getAttributeValue(null, "lon")?.toDoubleOrNull()
-                            if (lat != null && lon != null) {
-                                currentPoints.add(GeoPoint(lat, lon))
-                            }
+                            inPoint = true
+                            pendingLat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull() ?: 0.0
+                            pendingLon = parser.getAttributeValue(null, "lon")?.toDoubleOrNull() ?: 0.0
+                            pendingEle = 0.0
                         }
+                        "ele" -> { if (inPoint) inEle = true }
                     }
                 }
                 XmlPullParser.TEXT -> {
                     if (inName) {
                         currentName = parser.text?.trim() ?: ""
                     }
+                    if (inEle) {
+                        pendingEle = parser.text?.trim()?.toDoubleOrNull() ?: 0.0
+                    }
                 }
                 XmlPullParser.END_TAG -> {
                     when (parser.name?.lowercase()) {
+                        "trkpt", "rtept", "wpt" -> {
+                            if (inPoint && (pendingLat != 0.0 || pendingLon != 0.0)) {
+                                currentPoints.add(GeoPoint(pendingLat, pendingLon, pendingEle))
+                            }
+                            inPoint = false
+                        }
+                        "ele" -> inEle = false
                         "trk" -> {
                             if (currentPoints.isNotEmpty()) {
                                 routes.add(ParsedRoute(
@@ -216,8 +231,9 @@ object RouteImportHelper {
             if (parts.size >= 2) {
                 val lon = parts[0].toDoubleOrNull()
                 val lat = parts[1].toDoubleOrNull()
+                val alt = if (parts.size >= 3) parts[2].toDoubleOrNull() ?: 0.0 else 0.0
                 if (lat != null && lon != null) {
-                    points.add(GeoPoint(lat, lon))
+                    points.add(GeoPoint(lat, lon, alt))
                 }
             }
         }

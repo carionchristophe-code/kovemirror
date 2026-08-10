@@ -349,6 +349,23 @@
             android:padding="0dp"
             android:layout_marginTop="8dp" />
 
+        <!-- Toll Road Toggle Button (Shown only during active navigation) -->
+        <Button
+            android:id="@+id/btnTollToggle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="$"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:background="#CC16A34A"
+            android:elevation="4dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
         <!-- Loaded Routes List Button -->
         <Button
             android:id="@+id/btnRouteList"

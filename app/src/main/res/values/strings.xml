@@ -219,6 +219,25 @@
 
     <!-- Map & Cursor Customization -->
     <string name="map_settings_dialog_title">⚙️ Map &amp; Cursor Settings</string>
+    <string name="map_route_settings_title">⚙️ Route &amp; Marker Settings</string>
+    <string name="map_route_line_color">🎨 Route Line Color:</string>
+    <string name="map_route_line_width_format">Thickness: %1$dpx</string>
+    <string name="map_route_show_arrows">⬆️ Show Direction Arrows</string>
+    <string name="map_route_arrow_color">Direction Arrow Color:</string>
+    <string name="map_route_show_distance">📍 Show Distance Markers (km)</string>
+    <string name="map_route_distance_interval">Distance Display Interval:</string>
+    <string name="map_route_reversed_toast">🔄 %1$s direction reversed</string>
+    <string name="map_route_reverse_btn">Reverse Route</string>
+    <string name="color_red">🔴 Red</string>
+    <string name="color_orange">🟠 Orange</string>
+    <string name="color_yellow">🟡 Yellow</string>
+    <string name="color_green">🟢 Green</string>
+    <string name="color_blue">🔵 Blue</string>
+    <string name="color_purple">🟣 Purple</string>
+    <string name="color_pink">🩷 Pink</string>
+    <string name="color_white">⚪ White</string>
+    <string name="color_cyan">🩵 Cyan</string>
+    <string name="color_lime">🍏 Lime</string>
     <string name="label_map_theme">Map Theme:</string>
     <string name="map_theme_day">☀️ Day</string>
     <string name="map_theme_night">🌙 Night</string>
@@ -251,6 +270,7 @@
     <string name="nav_start_navigation">▶ Start Navigation</string>
     <string name="nav_route_options">⚙️ Options</string>
     <string name="nav_avoid_tolls">Avoid Tolls (Toll-Free)</string>
+    <string name="nav_toll_roads_toggle">🛣️ Toll Roads</string>
     <string name="nav_avoid_highways">Avoid Highways (No Highway)</string>
     <string name="nav_route_preference">Route Preference:</string>
     <string name="nav_type_fastest">⚡ Fastest Route</string>

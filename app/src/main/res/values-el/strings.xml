@@ -219,6 +219,25 @@
 
     <!-- Map & Cursor Customization -->
     <string name="map_settings_dialog_title">⚙️ Ρυθμίσεις Χάρτη &amp; Δείκτη</string>
+    <string name="map_route_settings_title">⚙️ Ρυθμίσεις Διαδρομής &amp; Δεικτών</string>
+    <string name="map_route_line_color">🎨 Χρώμα Γραμμής Διαδρομής:</string>
+    <string name="map_route_line_width_format">Πάχος: %1$dpx</string>
+    <string name="map_route_show_arrows">⬆️ Εμφάνιση Βελών Κατεύθυνσης</string>
+    <string name="map_route_arrow_color">Χρώμα Βέλους Κατεύθυνσης:</string>
+    <string name="map_route_show_distance">📍 Εμφάνιση Δεικτών Απόστασης (km)</string>
+    <string name="map_route_distance_interval">Διάστημα Απόστασης:</string>
+    <string name="map_route_reversed_toast">🔄 Η κατεύθυνση του %1$s αντιστράφηκε</string>
+    <string name="map_route_reverse_btn">Αντιστροφή Διαδρομής</string>
+    <string name="color_red">🔴 Κόκκινο</string>
+    <string name="color_orange">🟠 Πορτοκαλί</string>
+    <string name="color_yellow">🟡 Κίτρινο</string>
+    <string name="color_green">🟢 Πράσινο</string>
+    <string name="color_blue">🔵 Μπλε</string>
+    <string name="color_purple">🟣 Μοβ</string>
+    <string name="color_pink">🩷 Ροζ</string>
+    <string name="color_white">⚪ Λευκό</string>
+    <string name="color_cyan">🩵 Κυανό</string>
+    <string name="color_lime">🍏 Λαχανί</string>
     <string name="label_map_theme">Θέμα Χάρτη:</string>
     <string name="map_theme_day">☀️ Ημέρα</string>
     <string name="map_theme_night">🌙 Νύχτα</string>
@@ -251,6 +270,7 @@
     <string name="nav_start_navigation">▶ Έναρξη Πλοήγησης</string>
     <string name="nav_route_options">⚙️ Επιλογές</string>
     <string name="nav_avoid_tolls">Αποφυγή Διοδίων</string>
+    <string name="nav_toll_roads_toggle">🛣️ Διόδια</string>
     <string name="nav_avoid_highways">Αποφυγή Αυτοκινητοδρόμων</string>
     <string name="nav_route_preference">Προτίμηση Διαδρομής:</string>
     <string name="nav_type_fastest">⚡ Γρηγορότερη</string>

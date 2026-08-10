@@ -236,9 +236,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupAboutButton() {
         binding.btnAbout.setOnClickListener {
+            val message = "KoveMirror v${BuildConfig.VERSION_NAME}\n\n" + getString(R.string.about_developer_credit)
             AlertDialog.Builder(this)
                 .setTitle(R.string.about_dialog_title)
-                .setMessage(R.string.about_developer_credit)
+                .setMessage(message)
                 .setPositiveButton(R.string.btn_ok, null)
                 .show()
         }

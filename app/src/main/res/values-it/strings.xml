@@ -220,6 +220,25 @@
 
     <!-- Map & Cursor Customization -->
     <string name="map_settings_dialog_title">⚙️ Impostazioni Mappa e Cursore</string>
+    <string name="map_route_settings_title">⚙️ Impostazioni Percorso e Marcatori</string>
+    <string name="map_route_line_color">🎨 Colore Linea Percorso:</string>
+    <string name="map_route_line_width_format">Spessore: %1$dpx</string>
+    <string name="map_route_show_arrows">⬆️ Mostra Frecce di Direzione</string>
+    <string name="map_route_arrow_color">Colore Freccia di Direzione:</string>
+    <string name="map_route_show_distance">📍 Mostra Marcatori di Distanza (km)</string>
+    <string name="map_route_distance_interval">Intervallo di Distanza:</string>
+    <string name="map_route_reversed_toast">🔄 Direzione di %1$s invertita</string>
+    <string name="map_route_reverse_btn">Inverti Percorso</string>
+    <string name="color_red">🔴 Rosso</string>
+    <string name="color_orange">🟠 Arancione</string>
+    <string name="color_yellow">🟡 Giallo</string>
+    <string name="color_green">🟢 Verde</string>
+    <string name="color_blue">🔵 Blu</string>
+    <string name="color_purple">🟣 Viola</string>
+    <string name="color_pink">🩷 Rosa</string>
+    <string name="color_white">⚪ Bianco</string>
+    <string name="color_cyan">🩵 Ciano</string>
+    <string name="color_lime">🍏 Verde Lime</string>
     <string name="label_map_theme">Tema Mappa:</string>
     <string name="map_theme_day">☀️ Giorno</string>
     <string name="map_theme_night">🌙 Notte</string>
@@ -252,6 +271,7 @@
     <string name="nav_start_navigation">▶ Avvia Navigazione</string>
     <string name="nav_route_options">⚙️ Opzioni</string>
     <string name="nav_avoid_tolls">Evita Pedaggi (Senza Pedaggio)</string>
+    <string name="nav_toll_roads_toggle">🛣️ Pedaggi</string>
     <string name="nav_avoid_highways">Evita Autostrade (Senza Autostrada)</string>
     <string name="nav_route_preference">Preferenza Percorso:</string>
     <string name="nav_type_fastest">⚡ Più Veloce</string>

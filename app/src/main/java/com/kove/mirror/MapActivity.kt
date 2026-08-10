@@ -136,15 +136,24 @@ class MapActivity : AppCompatActivity() {
     // ─── Route Management ───────────────────────────────────────
 
     data class LoadedRoute(
+        val id: String = java.util.UUID.randomUUID().toString(),
         val name: String,
-        val points: List<GeoPoint>,
+        val groupName: String = name,
+        var points: List<GeoPoint>,
         var color: Int,
         var width: Float,
         var visible: Boolean = true,
-        var polyline: Polyline? = null
+        var showDirectionArrows: Boolean = true,
+        var arrowColor: Int = color,
+        var showDistanceMarkers: Boolean = true,
+        var distanceIntervalKm: Int = 5,
+        var polyline: Polyline? = null,
+        val arrowMarkers: MutableList<Marker> = mutableListOf(),
+        val distanceMarkers: MutableList<Marker> = mutableListOf()
     )
 
     private val loadedRoutes = mutableListOf<LoadedRoute>()
+    private val expandedGroups = mutableSetOf<String>()
     private val kmlMarkers = mutableListOf<Marker>()
     private val kmlPolygons = mutableListOf<org.osmdroid.views.overlay.Polygon>()
     private val loadedKmlPlacemarks = mutableListOf<KmlPlacemark>()
@@ -256,12 +265,22 @@ class MapActivity : AppCompatActivity() {
         setupButtons()
         setupMapEvents()
 
-        // Load saved settings & TFT black bar margins
+        // Load saved settings, map layer & TFT black bar margins
         val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
         recordingColor = prefs.getInt("map_recording_color", Color.parseColor("#EF4444"))
         val topPadding = prefs.getInt("map_top_padding_dp", 0)
         val bottomPadding = prefs.getInt("map_bottom_padding_dp", 0)
         applyTftPadding(topPadding, bottomPadding)
+
+        val savedLayer = prefs.getInt("map_layer", LAYER_MAPS)
+        val savedBaseLayer = prefs.getInt("map_base_layer", LAYER_MAPS)
+        val savedLayerBefore3d = prefs.getInt("map_layer_before_3d", LAYER_MAPS)
+        currentBaseLayer = savedBaseLayer
+        layerBefore3d = savedLayerBefore3d
+        switchLayer(savedLayer)
+
+        // Load saved routes and KML documents from persistent local storage
+        loadSavedRoutesFromStorage()
 
         // Restore active track recording if interrupted
         val tempRecording = GpxRecorderHelper.loadTempPoints(this)
@@ -388,7 +407,7 @@ class MapActivity : AppCompatActivity() {
                 val cam = map.cameraPosition ?: return@addOnCameraIdleListener
                 val maxTilt = maxPitchForZoom(cam.zoom)
                 map.setMaxPitchPreference(maxTilt)
-                if (kotlin.math.abs(cam.tilt - maxTilt) > 1.0) {
+                if (cam.tilt > maxTilt) {
                     map.setCameraPosition(CameraPosition.Builder(cam).tilt(maxTilt).build())
                 }
             }
@@ -431,6 +450,12 @@ class MapActivity : AppCompatActivity() {
                     map3d?.setDestination(LatLng(it.latitude, it.longitude))
                 }
                 sync2dCameraTo3d()
+            }
+
+            // If 3D mode is already active (e.g. switchLayer ran before getMapAsync
+            // returned), re-apply the correct base layer now that the map is ready.
+            if (currentLayer == LAYER_3D) {
+                apply3dBaseLayer()
             }
         }
     }
@@ -517,12 +542,14 @@ class MapActivity : AppCompatActivity() {
         if (follow3d || isNavigating) {
             val map = maplibreMap ?: return
             val zoom = map.cameraPosition?.zoom ?: 16.0
+            val currentTilt = map.cameraPosition?.tilt ?: maxPitchForZoom(zoom)
+            val targetTilt = currentTilt.coerceAtMost(maxPitchForZoom(zoom))
             map.setCameraPosition(
                 CameraPosition.Builder()
                     .target(LatLng(lat, lon))
                     .zoom(zoom)
                     .bearing(bearing ?: map.cameraPosition?.bearing ?: 0.0)
-                    .tilt(maxPitchForZoom(zoom))
+                    .tilt(targetTilt)
                     .build()
             )
         }
@@ -750,6 +777,10 @@ class MapActivity : AppCompatActivity() {
         val avoidHighways = prefs.getBoolean("nav_avoid_highways", false)
         val useShortest = prefs.getBoolean("nav_use_shortest", false)
 
+        val btnTolls = findViewById<Button>(R.id.btnTollToggle)
+        btnTolls?.visibility = View.VISIBLE
+        updateTollButtonState(avoidTolls)
+
         NavigationHelper.fetchRoute(
             start = myLoc,
             destination = dest,
@@ -826,6 +857,7 @@ class MapActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.navBanner).visibility = View.GONE
         findViewById<View>(R.id.topBar).visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.destCard).visibility = View.GONE
+        findViewById<Button>(R.id.btnTollToggle)?.visibility = View.GONE
 
         mapView.invalidate()
     }
@@ -1140,6 +1172,41 @@ class MapActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnMapSettings).setOnClickListener {
             showMapSettingsDialog()
         }
+
+        setupTollButtonListener()
+    }
+
+    private fun updateTollButtonState(avoidTolls: Boolean) {
+        val btnTolls = findViewById<Button>(R.id.btnTollToggle) ?: return
+        if (avoidTolls) {
+            btnTolls.setBackgroundColor(Color.parseColor("#CC333333"))
+            btnTolls.alpha = 0.6f
+        } else {
+            btnTolls.setBackgroundColor(Color.parseColor("#CC16A34A"))
+            btnTolls.alpha = 1.0f
+        }
+    }
+
+    private fun setupTollButtonListener() {
+        val btnTolls = findViewById<Button>(R.id.btnTollToggle) ?: return
+        btnTolls.setOnClickListener {
+            val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+            val currentAvoid = prefs.getBoolean("nav_avoid_tolls", false)
+            val newAvoid = !currentAvoid
+            prefs.edit().putBoolean("nav_avoid_tolls", newAvoid).apply()
+            updateTollButtonState(newAvoid)
+
+            val statusMsg = if (newAvoid) "🛣️ ${getString(R.string.nav_avoid_tolls)}" else "🛣️ ${getString(R.string.nav_toll_roads_toggle)}"
+            Toast.makeText(this, statusMsg, Toast.LENGTH_SHORT).show()
+
+            if (isNavigating) {
+                val myLoc = locationOverlay?.myLocation
+                val dest = selectedDestination
+                if (myLoc != null && myLoc.latitude != 0.0 && myLoc.longitude != 0.0 && dest != null) {
+                    recalculateRoute(myLoc, dest)
+                }
+            }
+        }
     }
 
     // ─── TFT Black Bar Margin Adjustment ────────────────────────
@@ -1274,8 +1341,11 @@ class MapActivity : AppCompatActivity() {
             currentBaseLayer = layer
         }
 
+        saveLayerPrefs()
+
         if (layer == LAYER_3D) {
             if (prevLayer != LAYER_3D) layerBefore3d = prevLayer
+            saveLayerPrefs()
             enter3dMode()
             updateLayerButtons()
             apply3dBaseLayer()
@@ -1331,6 +1401,19 @@ class MapActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // MapsForge offline maps render vector tiles at device DPI, so osmdroid's
+        // tilesScaleFactor would double-scale them.  Disable tile scaling for offline
+        // maps and restore the user's preference for online raster layers.
+        if (layer == LAYER_OFFLINE) {
+            mapView.tilesScaleFactor = 1.0f
+            mapView.isTilesScaledToDpi = false
+        } else {
+            val savedScale = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+                .getFloat("map_tiles_scale_factor", 1.0f)
+            applyMapTileScale(savedScale)
+        }
+
         applyMapTheme()
         updateLayerButtons()
         mapView.invalidate()
@@ -1468,6 +1551,16 @@ class MapActivity : AppCompatActivity() {
                     .putBoolean("nav_avoid_highways", newAvoidHighways)
                     .putBoolean("nav_use_shortest", newUseShortest)
                     .apply()
+
+                updateTollButtonState(newAvoidTolls)
+
+                if (isNavigating) {
+                    val myLoc = locationOverlay?.myLocation
+                    val dest = selectedDestination
+                    if (myLoc != null && myLoc.latitude != 0.0 && myLoc.longitude != 0.0 && dest != null) {
+                        recalculateRoute(myLoc, dest)
+                    }
+                }
 
                 Toast.makeText(this, "✅ ${getString(R.string.nav_route_options)}", Toast.LENGTH_SHORT).show()
             }
@@ -2237,15 +2330,28 @@ class MapActivity : AppCompatActivity() {
 
         val defaultColor = RouteStyleDialog.PRESET_COLORS[nextColorIndex % RouteStyleDialog.PRESET_COLORS.size]
 
-        val dialog = RouteStyleDialog(this, defaultColor, 5f) { color, width ->
-            importRoute(uri, color, width)
+        val dialog = RouteStyleDialog(
+            context = this,
+            initialColor = defaultColor,
+            initialWidth = 5f
+        ) { color, width, showArrows, arrowColor, showDistance, intervalKm ->
+            importRoute(uri, color, width, showArrows, arrowColor, showDistance, intervalKm)
         }
         dialog.show()
     }
 
-    private fun importRoute(uri: Uri, color: Int, width: Float) {
+    private fun importRoute(
+        uri: Uri,
+        color: Int,
+        width: Float,
+        showArrows: Boolean = true,
+        arrowColor: Int = color,
+        showDistance: Boolean = true,
+        intervalKm: Int = 5
+    ) {
         try {
             val scaleFactor = getSharedPreferences("kove_map_prefs", MODE_PRIVATE).getFloat("map_tiles_scale_factor", 1.0f)
+            val fileName = getFileNameFromUri(uri)?.ifEmpty { "Imported Route" } ?: "Imported Route"
             val kmlDoc = RouteImportHelper.parseKmlDocument(this, uri)
             if (kmlDoc != null && kmlDoc.placemarks.isNotEmpty()) {
                 var importedCount = 0
@@ -2303,29 +2409,28 @@ class MapActivity : AppCompatActivity() {
                         allPoints.addAll(pm.points)
                         val lineColor = pm.inlineStyle?.lineColor ?: color
                         val lineWidth = pm.inlineStyle?.lineWidth ?: width
-                        val polyline = Polyline().apply {
-                            setPoints(pm.points)
-                            outlinePaint.color = lineColor
-                            outlinePaint.strokeWidth = lineWidth * resources.displayMetrics.density
-                            outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
-                            outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
-                            outlinePaint.isAntiAlias = true
-                        }
 
                         val route = LoadedRoute(
                             name = pm.name.ifEmpty { "KML Track ${loadedRoutes.size + 1}" },
+                            groupName = fileName,
                             points = pm.points,
                             color = lineColor,
                             width = lineWidth,
-                            polyline = polyline
+                            visible = true,
+                            showDirectionArrows = showArrows,
+                            arrowColor = arrowColor,
+                            showDistanceMarkers = showDistance,
+                            distanceIntervalKm = intervalKm
                         )
 
+                        updateRouteOverlays(route)
                         loadedRoutes.add(route)
-                        mapView.overlays.add(polyline)
                         importedCount++
                     }
                 }
 
+                expandedGroups.add(fileName)
+                saveCurrentRoutesToStorage()
                 mapView.invalidate()
                 refresh3dRoutes()
                 if (allPoints.isNotEmpty()) zoomToFitPoints(allPoints)
@@ -2346,28 +2451,26 @@ class MapActivity : AppCompatActivity() {
             }
 
             for (parsed in parsedRoutes) {
-                val polyline = Polyline().apply {
-                    setPoints(parsed.points)
-                    outlinePaint.color = color
-                    outlinePaint.strokeWidth = width * resources.displayMetrics.density
-                    outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
-                    outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
-                    outlinePaint.isAntiAlias = true
-                }
-
                 val route = LoadedRoute(
                     name = parsed.name,
+                    groupName = fileName,
                     points = parsed.points,
                     color = color,
                     width = width,
-                    polyline = polyline
+                    visible = true,
+                    showDirectionArrows = showArrows,
+                    arrowColor = arrowColor,
+                    showDistanceMarkers = showDistance,
+                    distanceIntervalKm = intervalKm
                 )
 
+                updateRouteOverlays(route)
                 loadedRoutes.add(route)
-                mapView.overlays.add(polyline)
                 nextColorIndex++
             }
 
+            expandedGroups.add(fileName)
+            saveCurrentRoutesToStorage()
             mapView.invalidate()
             refresh3dRoutes()
 
@@ -2503,32 +2606,246 @@ class MapActivity : AppCompatActivity() {
 
     // ─── Route List UI ──────────────────────────────────────────
 
+    private fun updateRouteOverlays(route: LoadedRoute) {
+        route.polyline?.let { mapView.overlays.remove(it) }
+        for (m in route.arrowMarkers) { mapView.overlays.remove(m) }
+        route.arrowMarkers.clear()
+        for (m in route.distanceMarkers) { mapView.overlays.remove(m) }
+        route.distanceMarkers.clear()
+
+        if (route.visible) {
+            val polyline = Polyline().apply {
+                setPoints(route.points)
+                outlinePaint.color = route.color
+                outlinePaint.strokeWidth = route.width * resources.displayMetrics.density
+                outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                outlinePaint.isAntiAlias = true
+            }
+            route.polyline = polyline
+            mapView.overlays.add(polyline)
+
+            if (route.showDirectionArrows && route.points.size >= 2) {
+                val arrows = RouteOverlayHelper.createDirectionArrowOverlays(this, mapView, route.points, route.arrowColor)
+                route.arrowMarkers.addAll(arrows)
+                for (m in arrows) mapView.overlays.add(m)
+            }
+
+            if (route.showDistanceMarkers && route.points.size >= 2) {
+                val distMarkers = RouteOverlayHelper.createDistanceMarkerOverlays(this, mapView, route.points, route.distanceIntervalKm)
+                route.distanceMarkers.addAll(distMarkers)
+                for (m in distMarkers) mapView.overlays.add(m)
+            }
+        }
+    }
+
+    private fun reverseRoute(index: Int) {
+        if (index !in loadedRoutes.indices) return
+        val route = loadedRoutes[index]
+        route.points = route.points.reversed()
+        updateRouteOverlays(route)
+        saveCurrentRoutesToStorage()
+        mapView.invalidate()
+        refresh3dRoutes()
+        refreshRouteList()
+        Toast.makeText(this, getString(R.string.map_route_reversed_toast, route.name), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun saveCurrentRoutesToStorage() {
+        val dtoList = loadedRoutes.map { r ->
+            SavedRouteDto(
+                id = r.id,
+                name = r.name,
+                groupName = r.groupName,
+                points = r.points.map { p -> SavedPointDto(p.latitude, p.longitude, p.altitude) },
+                color = r.color,
+                width = r.width,
+                visible = r.visible,
+                showDirectionArrows = r.showDirectionArrows,
+                arrowColor = r.arrowColor,
+                showDistanceMarkers = r.showDistanceMarkers,
+                distanceIntervalKm = r.distanceIntervalKm,
+                placemarks = loadedKmlPlacemarks.map { pm ->
+                    SavedPlacemarkDto(
+                        name = pm.name,
+                        description = pm.description,
+                        styleUrl = pm.styleUrl,
+                        geometryType = pm.geometryType.name,
+                        points = pm.points.map { p -> SavedPointDto(p.latitude, p.longitude, p.altitude) },
+                        polygons = pm.polygons.map { ring -> ring.map { p -> SavedPointDto(p.latitude, p.longitude, p.altitude) } },
+                        lineColor = pm.inlineStyle?.lineColor,
+                        lineWidth = pm.inlineStyle?.lineWidth,
+                        polyColor = pm.inlineStyle?.polyColor
+                    )
+                }
+            )
+        }
+        RouteStorageManager.saveRoutes(this, dtoList)
+    }
+
+    private fun loadSavedRoutesFromStorage() {
+        val dtoList = RouteStorageManager.loadRoutes(this)
+        if (dtoList.isEmpty()) return
+
+        val scaleFactor = getSharedPreferences("kove_map_prefs", MODE_PRIVATE).getFloat("map_tiles_scale_factor", 1.0f)
+        val allPointsToFit = mutableListOf<GeoPoint>()
+
+        for (dto in dtoList) {
+            val pts = dto.points.map { GeoPoint(it.lat, it.lon, it.alt) }
+            val route = LoadedRoute(
+                id = dto.id,
+                name = dto.name,
+                groupName = dto.groupName,
+                points = pts,
+                color = dto.color,
+                width = dto.width,
+                visible = dto.visible,
+                showDirectionArrows = dto.showDirectionArrows,
+                arrowColor = dto.arrowColor,
+                showDistanceMarkers = dto.showDistanceMarkers,
+                distanceIntervalKm = dto.distanceIntervalKm
+            )
+
+            updateRouteOverlays(route)
+            loadedRoutes.add(route)
+            if (pts.isNotEmpty()) allPointsToFit.addAll(pts)
+
+            // Reconstruct KML placemarks if present
+            for (pmDto in dto.placemarks) {
+                val pmPts = pmDto.points.map { GeoPoint(it.lat, it.lon, it.alt) }
+                val pmPolys = pmDto.polygons.map { ring -> ring.map { GeoPoint(it.lat, it.lon, it.alt) } }
+                val geomType = try { KmlGeometryType.valueOf(pmDto.geometryType) } catch (_: Exception) { KmlGeometryType.LINESTRING }
+                val inlineStyle = KmlStyle(
+                    lineColor = pmDto.lineColor,
+                    lineWidth = pmDto.lineWidth,
+                    polyColor = pmDto.polyColor
+                )
+
+                val placemark = KmlPlacemark(
+                    name = pmDto.name,
+                    description = pmDto.description,
+                    styleUrl = pmDto.styleUrl,
+                    inlineStyle = inlineStyle,
+                    geometryType = geomType,
+                    points = pmPts,
+                    polygons = pmPolys
+                )
+                loadedKmlPlacemarks.add(placemark)
+
+                if (geomType == KmlGeometryType.POINT && pmPts.isNotEmpty()) {
+                    val pt = pmPts.first()
+                    val compositeBmp = PoiMarkerHelper.createCompositePoiBitmap(this, pmDto.name, pmDto.description, null, scaleFactor)
+                    val marker = Marker(mapView).apply {
+                        position = pt
+                        title = pmDto.name.ifEmpty { "POI" }
+                        snippet = pmDto.description
+                        icon = android.graphics.drawable.BitmapDrawable(resources, compositeBmp)
+                        setAnchor(Marker.ANCHOR_LEFT, Marker.ANCHOR_CENTER)
+                        setOnMarkerClickListener { m, _ ->
+                            m.showInfoWindow()
+                            if (pmDto.description.isNotEmpty()) {
+                                showPoiDescriptionDialog(pmDto.name, pmDto.description, pt)
+                            }
+                            true
+                        }
+                    }
+                    kmlMarkers.add(marker)
+                    mapView.overlays.add(marker)
+                } else if (pmPolys.isNotEmpty()) {
+                    for (ring in pmPolys) {
+                        if (ring.size >= 3) {
+                            val polygon = org.osmdroid.views.overlay.Polygon().apply {
+                                points = ring
+                                fillPaint.color = pmDto.polyColor ?: dto.color
+                                outlinePaint.color = pmDto.lineColor ?: dto.color
+                                outlinePaint.strokeWidth = (pmDto.lineWidth ?: dto.width) * resources.displayMetrics.density
+                            }
+                            kmlPolygons.add(polygon)
+                            mapView.overlays.add(polygon)
+                        }
+                    }
+                }
+            }
+        }
+
+        mapView.invalidate()
+        refresh3dRoutes()
+        refreshRouteList()
+        val btnRouteList = findViewById<Button>(R.id.btnRouteList)
+        btnRouteList.visibility = if (loadedRoutes.isNotEmpty()) View.VISIBLE else View.GONE
+    }
+
     @SuppressLint("InflateParams")
     private fun refreshRouteList() {
         val container = findViewById<LinearLayout>(R.id.routeListItems)
         container.removeAllViews()
 
-        for ((index, route) in loadedRoutes.withIndex()) {
-            val itemView = LayoutInflater.from(this).inflate(R.layout.item_route, container, false)
+        if (loadedRoutes.isEmpty()) return
 
-            val colorView = itemView.findViewById<View>(R.id.viewRouteColor)
-            val colorDrawable = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(route.color)
+        val grouped = loadedRoutes.groupBy { it.groupName }
+
+        for ((groupName, routes) in grouped) {
+            val isExpanded = expandedGroups.contains(groupName)
+            val groupView = LayoutInflater.from(this).inflate(R.layout.item_route_group, container, false)
+
+            val tvExpandArrow = groupView.findViewById<TextView>(R.id.tvGroupExpandArrow)
+            tvExpandArrow.text = if (isExpanded) "▼" else "▶"
+
+            groupView.findViewById<TextView>(R.id.tvGroupName).text = groupName
+
+            val totalPoints = routes.sumOf { it.points.size }
+            val trackCount = routes.size
+            groupView.findViewById<TextView>(R.id.tvGroupSummary).text = "$trackCount track(s) • $totalPoints pts"
+
+            val isGroupVisible = routes.any { it.visible }
+            val btnVisibility = groupView.findViewById<ImageView>(R.id.btnGroupVisibility)
+            btnVisibility.alpha = if (isGroupVisible) 1.0f else 0.3f
+
+            val toggleExpandAction = View.OnClickListener {
+                if (isExpanded) {
+                    expandedGroups.remove(groupName)
+                } else {
+                    expandedGroups.add(groupName)
+                }
+                refreshRouteList()
             }
-            colorView.background = colorDrawable
 
-            itemView.findViewById<TextView>(R.id.tvRouteName).text = route.name
-            itemView.findViewById<TextView>(R.id.tvRoutePoints).text = "${route.points.size} pts"
+            groupView.findViewById<View>(R.id.layoutGroupHeader).setOnClickListener(toggleExpandAction)
+            tvExpandArrow.setOnClickListener(toggleExpandAction)
 
-            itemView.findViewById<ImageView>(R.id.btnRouteStyle).setOnClickListener {
-                val dialog = RouteStyleDialog(this, route.color, route.width) { newColor, newWidth ->
-                    route.color = newColor
-                    route.width = newWidth
-                    route.polyline?.let { poly ->
-                        poly.outlinePaint.color = newColor
-                        poly.outlinePaint.strokeWidth = newWidth * resources.displayMetrics.density
+            groupView.findViewById<ImageView>(R.id.btnGroupReverse).setOnClickListener {
+                for (r in routes) {
+                    r.points = r.points.reversed()
+                    updateRouteOverlays(r)
+                }
+                saveCurrentRoutesToStorage()
+                mapView.invalidate()
+                refresh3dRoutes()
+                refreshRouteList()
+                Toast.makeText(this, "🔄 $groupName reversed", Toast.LENGTH_SHORT).show()
+            }
+
+            groupView.findViewById<ImageView>(R.id.btnGroupStyle).setOnClickListener {
+                val sample = routes.first()
+                val dialog = RouteStyleDialog(
+                    context = this,
+                    initialColor = sample.color,
+                    initialWidth = sample.width,
+                    initialShowArrows = sample.showDirectionArrows,
+                    initialArrowColor = sample.arrowColor,
+                    initialShowDistance = sample.showDistanceMarkers,
+                    initialDistanceIntervalKm = sample.distanceIntervalKm
+                ) { newColor, newWidth, newShowArrows, newArrowColor, newShowDistance, newIntervalKm ->
+                    for (r in routes) {
+                        r.color = newColor
+                        r.width = newWidth
+                        r.showDirectionArrows = newShowArrows
+                        r.arrowColor = newArrowColor
+                        r.showDistanceMarkers = newShowDistance
+                        r.distanceIntervalKm = newIntervalKm
+                        updateRouteOverlays(r)
                     }
+                    saveCurrentRoutesToStorage()
                     mapView.invalidate()
                     refresh3dRoutes()
                     refreshRouteList()
@@ -2536,23 +2853,27 @@ class MapActivity : AppCompatActivity() {
                 dialog.show()
             }
 
-            val btnVisibility = itemView.findViewById<ImageView>(R.id.btnRouteVisibility)
-            btnVisibility.alpha = if (route.visible) 1.0f else 0.3f
             btnVisibility.setOnClickListener {
-                route.visible = !route.visible
-                if (route.visible) {
-                    route.polyline?.let { if (!mapView.overlays.contains(it)) mapView.overlays.add(it) }
-                } else {
-                    route.polyline?.let { mapView.overlays.remove(it) }
+                val targetVisible = !isGroupVisible
+                for (r in routes) {
+                    r.visible = targetVisible
+                    updateRouteOverlays(r)
                 }
+                saveCurrentRoutesToStorage()
                 mapView.invalidate()
                 refresh3dRoutes()
                 refreshRouteList()
             }
 
-            itemView.findViewById<ImageView>(R.id.btnRouteDelete).setOnClickListener {
-                route.polyline?.let { mapView.overlays.remove(it) }
-                loadedRoutes.removeAt(index)
+            groupView.findViewById<ImageView>(R.id.btnGroupDelete).setOnClickListener {
+                for (r in routes) {
+                    r.polyline?.let { mapView.overlays.remove(it) }
+                    for (m in r.arrowMarkers) { mapView.overlays.remove(m) }
+                    for (m in r.distanceMarkers) { mapView.overlays.remove(m) }
+                    loadedRoutes.remove(r)
+                }
+                expandedGroups.remove(groupName)
+                saveCurrentRoutesToStorage()
 
                 if (loadedRoutes.isEmpty()) {
                     clearAllImportedOverlays()
@@ -2563,13 +2884,93 @@ class MapActivity : AppCompatActivity() {
                 }
             }
 
-            container.addView(itemView)
+            container.addView(groupView)
+
+            // Render sub-items if expanded
+            if (isExpanded) {
+                for (route in routes) {
+                    val subIndex = loadedRoutes.indexOf(route)
+                    val itemView = LayoutInflater.from(this).inflate(R.layout.item_route, container, false)
+                    itemView.setPadding((24 * resources.displayMetrics.density).toInt(), (8 * resources.displayMetrics.density).toInt(), (8 * resources.displayMetrics.density).toInt(), (8 * resources.displayMetrics.density).toInt())
+
+                    val colorView = itemView.findViewById<View>(R.id.viewRouteColor)
+                    val colorDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(route.color)
+                    }
+                    colorView.background = colorDrawable
+
+                    itemView.findViewById<TextView>(R.id.tvRouteName).text = "└ ${route.name}"
+                    itemView.findViewById<TextView>(R.id.tvRoutePoints).text = "${route.points.size} pts"
+
+                    itemView.findViewById<ImageView>(R.id.btnRouteReverse)?.setOnClickListener {
+                        reverseRoute(subIndex)
+                    }
+
+                    itemView.findViewById<ImageView>(R.id.btnRouteStyle).setOnClickListener {
+                        val dialog = RouteStyleDialog(
+                            context = this,
+                            initialColor = route.color,
+                            initialWidth = route.width,
+                            initialShowArrows = route.showDirectionArrows,
+                            initialArrowColor = route.arrowColor,
+                            initialShowDistance = route.showDistanceMarkers,
+                            initialDistanceIntervalKm = route.distanceIntervalKm
+                        ) { newColor, newWidth, newShowArrows, newArrowColor, newShowDistance, newIntervalKm ->
+                            route.color = newColor
+                            route.width = newWidth
+                            route.showDirectionArrows = newShowArrows
+                            route.arrowColor = newArrowColor
+                            route.showDistanceMarkers = newShowDistance
+                            route.distanceIntervalKm = newIntervalKm
+
+                            updateRouteOverlays(route)
+                            saveCurrentRoutesToStorage()
+                            mapView.invalidate()
+                            refresh3dRoutes()
+                            refreshRouteList()
+                        }
+                        dialog.show()
+                    }
+
+                    val btnSubVisibility = itemView.findViewById<ImageView>(R.id.btnRouteVisibility)
+                    btnSubVisibility.alpha = if (route.visible) 1.0f else 0.3f
+                    btnSubVisibility.setOnClickListener {
+                        route.visible = !route.visible
+                        updateRouteOverlays(route)
+                        saveCurrentRoutesToStorage()
+                        mapView.invalidate()
+                        refresh3dRoutes()
+                        refreshRouteList()
+                    }
+
+                    itemView.findViewById<ImageView>(R.id.btnRouteDelete).setOnClickListener {
+                        route.polyline?.let { mapView.overlays.remove(it) }
+                        for (m in route.arrowMarkers) { mapView.overlays.remove(m) }
+                        for (m in route.distanceMarkers) { mapView.overlays.remove(m) }
+                        loadedRoutes.removeAt(subIndex)
+                        saveCurrentRoutesToStorage()
+
+                        if (loadedRoutes.isEmpty()) {
+                            clearAllImportedOverlays()
+                        } else {
+                            mapView.invalidate()
+                            refresh3dRoutes()
+                            refreshRouteList()
+                        }
+                    }
+
+                    container.addView(itemView)
+                }
+            }
         }
     }
 
     private fun clearAllImportedOverlays() {
         for (route in loadedRoutes) {
             route.polyline?.let { mapView.overlays.remove(it) }
+            for (m in route.arrowMarkers) { mapView.overlays.remove(m) }
+            for (m in route.distanceMarkers) { mapView.overlays.remove(m) }
         }
         loadedRoutes.clear()
 
@@ -2584,6 +2985,7 @@ class MapActivity : AppCompatActivity() {
         kmlPolygons.clear()
 
         loadedKmlPlacemarks.clear()
+        RouteStorageManager.saveRoutes(this, emptyList())
 
         mapView.invalidate()
         refresh3dRoutes()
@@ -2675,6 +3077,18 @@ class MapActivity : AppCompatActivity() {
             putFloat("map_lat", center.latitude.toFloat())
             putFloat("map_lon", center.longitude.toFloat())
             putFloat("map_zoom", mapView.zoomLevelDouble.toFloat())
+            putInt("map_layer", currentLayer)
+            putInt("map_base_layer", currentBaseLayer)
+            putInt("map_layer_before_3d", layerBefore3d)
+            apply()
+        }
+    }
+
+    private fun saveLayerPrefs() {
+        getSharedPreferences("kove_map_prefs", MODE_PRIVATE).edit().apply {
+            putInt("map_layer", currentLayer)
+            putInt("map_base_layer", currentBaseLayer)
+            putInt("map_layer_before_3d", layerBefore3d)
             apply()
         }
     }

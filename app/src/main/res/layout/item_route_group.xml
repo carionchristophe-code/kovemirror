@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="#0F172A"
+    android:padding="12dp"
+    android:layout_marginBottom="3dp">
+
+    <!-- Expand/Collapse arrow -->
+    <TextView
+        android:id="@+id/tvGroupExpandArrow"
+        android:layout_width="20dp"
+        android:layout_height="wrap_content"
+        android:text="▶"
+        android:textColor="#38BDF8"
+        android:textSize="12sp"
+        android:gravity="center" />
+
+    <!-- Group Icon -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📁"
+        android:textSize="16sp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="6dp" />
+
+    <!-- Group Name & Sub-tracks summary -->
+    <LinearLayout
+        android:id="@+id/layoutGroupHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:id="@+id/tvGroupName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Group Name.gpx" />
+
+        <TextView
+            android:id="@+id/tvGroupSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#94A3B8"
+            android:textSize="11sp"
+            android:text="1 track • 1200 pts" />
+    </LinearLayout>
+
+    <!-- Group Reverse direction -->
+    <ImageView
+        android:id="@+id/btnGroupReverse"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_rotate"
+        android:contentDescription="Reverse Group"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Group Settings (Style & Markers) -->
+    <ImageView
+        android:id="@+id/btnGroupStyle"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_edit"
+        android:contentDescription="Group Settings"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Group Visibility toggle -->
+    <ImageView
+        android:id="@+id/btnGroupVisibility"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_view"
+        android:contentDescription="Toggle Group Visibility"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Group Delete -->
+    <ImageView
+        android:id="@+id/btnGroupDelete"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="Delete Group" />
+
+</LinearLayout>

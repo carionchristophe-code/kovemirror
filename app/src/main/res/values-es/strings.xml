@@ -218,7 +218,26 @@
     <string name="map_waiting_gps">📍 Esperando señal GPS…</string>
 
     <!-- Map & Cursor Customization -->
-    <string name="map_settings_dialog_title">⚙️ Ajustes de Mapa y Cursor</string>
+    <string name="map_settings_dialog_title">⚙️ Configuración de Mapa y Cursor</string>
+    <string name="map_route_settings_title">⚙️ Configuración de Ruta y Marcadores</string>
+    <string name="map_route_line_color">🎨 Color de Línea de Ruta:</string>
+    <string name="map_route_line_width_format">Grosor: %1$dpx</string>
+    <string name="map_route_show_arrows">⬆️ Mostrar Flechas de Dirección</string>
+    <string name="map_route_arrow_color">Color de Flecha de Dirección:</string>
+    <string name="map_route_show_distance">📍 Mostrar Marcadores de Distancia (km)</string>
+    <string name="map_route_distance_interval">Intervalo de Distancia:</string>
+    <string name="map_route_reversed_toast">🔄 Dirección de %1$s invertida</string>
+    <string name="map_route_reverse_btn">Invertir Ruta</string>
+    <string name="color_red">🔴 Rojo</string>
+    <string name="color_orange">🟠 Naranja</string>
+    <string name="color_yellow">🟡 Amarillo</string>
+    <string name="color_green">🟢 Verde</string>
+    <string name="color_blue">🔵 Azul</string>
+    <string name="color_purple">🟣 Púrpura</string>
+    <string name="color_pink">🩷 Rosa</string>
+    <string name="color_white">⚪ Blanco</string>
+    <string name="color_cyan">🩵 Cian</string>
+    <string name="color_lime">🍏 Verde Lima</string>
     <string name="label_map_theme">Tema del Mapa:</string>
     <string name="map_theme_day">☀️ Día</string>
     <string name="map_theme_night">🌙 Noche</string>
@@ -251,6 +270,7 @@
     <string name="nav_start_navigation">▶ Iniciar Navegación</string>
     <string name="nav_route_options">⚙️ Opciones</string>
     <string name="nav_avoid_tolls">Evitar Peajes (Sin Peaje)</string>
+    <string name="nav_toll_roads_toggle">🛣️ Peajes</string>
     <string name="nav_avoid_highways">Evitar Autopistas (Sin Autopista)</string>
     <string name="nav_route_preference">Preferencia de Ruta:</string>
     <string name="nav_type_fastest">⚡ Más Rápida</string>
