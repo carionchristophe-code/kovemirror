@@ -47,7 +47,16 @@
             android:text="@string/btn_search"
             android:textSize="12sp"
             android:textColor="#FFFFFF"
-            android:background="#2563EB"
+            android:background="@drawable/bg_btn_nav"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:textAllCaps="false"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
             android:layout_marginStart="8dp" />
     </LinearLayout>
 
@@ -85,5 +94,12 @@
         android:text="@string/map_btn_close"
         android:textSize="13sp"
         android:textColor="#FFFFFF"
-        android:background="#475569" />
+        android:background="@drawable/bg_btn_item_action"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:textAllCaps="false"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp" />
 </LinearLayout>

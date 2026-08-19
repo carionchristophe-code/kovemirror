@@ -4,16 +4,16 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:background="#1E293B"
+    android:background="@drawable/bg_fav_item"
     android:padding="8dp"
-    android:layout_marginBottom="4dp">
+    android:layout_marginBottom="6dp">
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:paddingEnd="6dp">
+        android:paddingEnd="8dp">
 
         <TextView
             android:id="@+id/tvItemTitle"
@@ -38,26 +38,43 @@
     <Button
         android:id="@+id/btnNavToItem"
         android:layout_width="wrap_content"
-        android:layout_height="32dp"
+        android:layout_height="34dp"
         android:text="▶ Nav"
-        android:textSize="11sp"
+        android:textSize="12sp"
+        android:textStyle="bold"
         android:textColor="#FFFFFF"
-        android:background="#2563EB"
-        android:paddingStart="6dp"
-        android:paddingEnd="6dp"
+        android:background="@drawable/bg_btn_nav"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp"
         android:minWidth="0dp"
         android:minHeight="0dp"
-        android:layout_marginEnd="4dp" />
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textAllCaps="false"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
+        android:layout_marginEnd="6dp" />
 
     <Button
         android:id="@+id/btnActionItem"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
         android:text="🗑️"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textColor="#FFFFFF"
-        android:background="#475569"
+        android:background="@drawable/bg_btn_item_action"
         android:minWidth="0dp"
         android:minHeight="0dp"
-        android:padding="0dp" />
+        android:padding="0dp"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textAllCaps="false"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp" />
 </LinearLayout>

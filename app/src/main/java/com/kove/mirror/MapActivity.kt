@@ -793,10 +793,6 @@ class MapActivity : AppCompatActivity() {
                     initialTotalDurationSeconds = route.totalDurationSeconds
                     isNavigating = true
 
-                    val initialMin = (route.totalDurationSeconds / 60.0).toInt()
-                    val initialStr = formatDurationText(initialMin)
-                    findViewById<TextView>(R.id.tvInitialTotalDuration)?.text = getString(R.string.label_initial_total_time, initialStr)
-
                     map3d?.setNavigationRoute(
                         route.geometryPoints.map { LatLng(it.latitude, it.longitude) }
                     )
@@ -926,31 +922,79 @@ class MapActivity : AppCompatActivity() {
             return
         }
 
-        // Find nearest step in route ahead of current location
-        val validSteps = route.steps.filter { it.location.latitude != 0.0 && it.location.longitude != 0.0 }
-        val nextStep = validSteps.firstOrNull { step ->
-            currentLocation.distanceToAsDouble(step.location) < 500.0
-        } ?: validSteps.firstOrNull()
+        // Find upcoming active step along the route
+        var activeStepIndex = -1
+        for (i in route.steps.indices) {
+            val step = route.steps[i]
+            if (step.type == "arrive") {
+                if (activeStepIndex == -1) activeStepIndex = i
+                break
+            }
+            if (step.shapeIndex > nearestSegIndex) {
+                activeStepIndex = i
+                break
+            } else if (step.shapeIndex == nearestSegIndex) {
+                val d = currentLocation.distanceToAsDouble(step.location)
+                if (d > 15.0) {
+                    activeStepIndex = i
+                    break
+                }
+            }
+        }
+
+        if (activeStepIndex == -1) {
+            activeStepIndex = (route.steps.size - 1).coerceAtLeast(0)
+        }
+
+        // If active step is just "depart", advance to next turn if available
+        if (activeStepIndex in route.steps.indices &&
+            route.steps[activeStepIndex].type == "depart" &&
+            activeStepIndex + 1 < route.steps.size
+        ) {
+            activeStepIndex++
+        }
 
         val tvIcon = findViewById<TextView>(R.id.tvTurnIcon)
         val tvInstruction = findViewById<TextView>(R.id.tvTurnInstruction)
         val tvTurnDist = findViewById<TextView>(R.id.tvTurnDistance)
         val tvTotalEta = findViewById<TextView>(R.id.tvTotalDistanceEta)
 
-        if (nextStep != null) {
-            val distToStep = currentLocation.distanceToAsDouble(nextStep.location)
-            tvInstruction.text = nextStep.instruction
+        val activeStep = route.steps.getOrNull(activeStepIndex)
+        if (activeStep != null) {
+            tvInstruction.text = activeStep.instruction
 
-            if (distToStep < route.totalDistanceMeters * 1.5 && nextStep.location.latitude != 0.0) {
-                tvTurnDist.text = if (distToStep < 1000) "${distToStep.toInt()} m" else String.format(Locale.getDefault(), "%.1f km", distToStep / 1000.0)
+            val targetIdx = activeStep.shapeIndex.coerceIn(0, (pts.size - 1).coerceAtLeast(0))
+            var distToStepMeters = 0.0
+            if (targetIdx > nearestSegIndex && pts.size > 1) {
+                distToStepMeters = currentLocation.distanceToAsDouble(pts[(nearestSegIndex + 1).coerceAtMost(pts.size - 1)])
+                for (i in (nearestSegIndex + 1) until targetIdx) {
+                    distToStepMeters += pts[i].distanceToAsDouble(pts[i + 1])
+                }
+            } else {
+                distToStepMeters = currentLocation.distanceToAsDouble(activeStep.location)
+            }
+
+            if (distToStepMeters < route.totalDistanceMeters * 1.5 && activeStep.location.latitude != 0.0) {
+                tvTurnDist.text = if (distToStepMeters < 1000) {
+                    "${distToStepMeters.toInt()} m"
+                } else {
+                    String.format(Locale.getDefault(), "%.1f km", distToStepMeters / 1000.0)
+                }
             } else {
                 tvTurnDist.text = ""
             }
 
             tvIcon.text = when {
-                nextStep.modifier.contains("left") -> "⬅️"
-                nextStep.modifier.contains("right") -> "➡️"
-                nextStep.modifier.contains("uturn") -> "↩️"
+                activeStep.type == "arrive" -> "📍"
+                activeStep.modifier.contains("sharp left") -> "⬅️"
+                activeStep.modifier.contains("sharp right") -> "➡️"
+                activeStep.modifier.contains("slight left") -> "↖️"
+                activeStep.modifier.contains("slight right") -> "↗️"
+                activeStep.modifier.contains("left") -> "⬅️"
+                activeStep.modifier.contains("right") -> "➡️"
+                activeStep.modifier.contains("uturn") || activeStep.modifier.contains("u turn") ||
+                        activeStep.type.contains("uturn") || activeStep.type.contains("u turn") -> "↩️"
+                activeStep.type.contains("roundabout") || activeStep.type.contains("rotary") -> "🔄"
                 else -> "⬆️"
             }
         }

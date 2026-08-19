@@ -19,7 +19,8 @@ object NavigationHelper {
         val durationSeconds: Double,
         val location: GeoPoint,
         val modifier: String,
-        val type: String
+        val type: String,
+        val shapeIndex: Int = 0
     )
 
     data class NavigationRoute(
@@ -169,7 +170,8 @@ object NavigationHelper {
                         durationSeconds = durSeconds,
                         location = stepLoc,
                         modifier = modifierStr,
-                        type = typeStr
+                        type = typeStr,
+                        shapeIndex = beginIdx
                     )
                 )
             }
@@ -351,8 +353,19 @@ object NavigationHelper {
                     GeoPoint(0.0, 0.0)
                 }
 
+                // Find closest geometry point index for this maneuver
+                var shapeIdx = 0
+                var minStepDist = Double.MAX_VALUE
+                for (g in geoPoints.indices) {
+                    val d = locPoint.distanceToAsDouble(geoPoints[g])
+                    if (d < minStepDist) {
+                        minStepDist = d
+                        shapeIdx = g
+                    }
+                }
+
                 val instruction = buildInstructionText(type, modifier, name)
-                steps.add(RouteStep(instruction, dist, dur, locPoint, modifier, type))
+                steps.add(RouteStep(instruction, dist, dur, locPoint, modifier, type, shapeIdx))
             }
         }
 

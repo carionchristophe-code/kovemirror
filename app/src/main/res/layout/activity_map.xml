@@ -170,7 +170,7 @@
                     android:layout_height="wrap_content"
                     android:text="Calculating route..."
                     android:textColor="#FFFFFF"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -179,7 +179,7 @@
                     android:layout_height="wrap_content"
                     android:text="in 200 m"
                     android:textColor="#FCD34D"
-                    android:textSize="13sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -188,13 +188,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="@string/nav_stop"
-                android:textSize="11sp"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:textColor="#FFFFFF"
                 android:background="#DC2626"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
                 android:minWidth="0dp"
-                android:minHeight="0dp" />
+                android:minHeight="0dp"
+                android:textAllCaps="false"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp" />
         </LinearLayout>
 
         <!-- White Divider Line -->
@@ -205,7 +211,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="6dp" />
 
-        <!-- Total Time & Remaining Time / Distance Bar -->
+        <!-- Remaining Time / Distance Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -213,22 +219,12 @@
             android:gravity="center_vertical">
 
             <TextView
-                android:id="@+id/tvInitialTotalDuration"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Total: -- min"
-                android:textColor="#E2E8F0"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:id="@+id/tvTotalDistanceEta"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Remaining: -- min (0.0 km)"
                 android:textColor="#FCD34D"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
