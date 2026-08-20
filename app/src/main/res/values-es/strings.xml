@@ -353,4 +353,10 @@
     <string name="about_developer_credit">Diseñado y desarrollado por H. Nakturk</string>
     <string name="btn_toggle_debug_show">📋 Mostrar Terminal Debug</string>
     <string name="btn_toggle_debug_hide">📋 Ocultar Terminal Debug</string>
+
+    <!-- Atenuar Pantalla (Ahorro de Energía) -->
+    <string name="btn_screen_dim_off">🔆 Pantalla: Normal</string>
+    <string name="btn_screen_dim_on">🌑 Pantalla: Atenuada</string>
+    <string name="toast_screen_dimmed">🌑 Pantalla atenuada para ahorrar energía. La duplicación continúa.</string>
+    <string name="toast_screen_bright">🔆 Brillo de pantalla restaurado.</string>
 </resources>

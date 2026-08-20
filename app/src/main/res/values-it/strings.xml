@@ -354,4 +354,10 @@
     <string name="about_developer_credit">Progettato e sviluppato da H. Nakturk</string>
     <string name="btn_toggle_debug_show">📋 Mostra Terminale Debug</string>
     <string name="btn_toggle_debug_hide">📋 Nascondi Terminale Debug</string>
+
+    <!-- Oscuramento Schermo (Risparmio Energetico) -->
+    <string name="btn_screen_dim_off">🔆 Schermo: Normale</string>
+    <string name="btn_screen_dim_on">🌑 Schermo: Oscurato</string>
+    <string name="toast_screen_dimmed">🌑 Schermo oscurato per risparmiare energia. Il mirroring continua.</string>
+    <string name="toast_screen_bright">🔆 Luminosità schermo ripristinata.</string>
 </resources>

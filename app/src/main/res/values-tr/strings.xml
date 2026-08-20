@@ -352,4 +352,10 @@
     <string name="about_developer_credit">H. Nakturk tarafından dizayn edilip geliştirildi</string>
     <string name="btn_toggle_debug_show">📋 Debug Terminali Göster</string>
     <string name="btn_toggle_debug_hide">📋 Debug Terminali Gizle</string>
+
+    <!-- Ekran Karartma (Enerji Tasarrufu) -->
+    <string name="btn_screen_dim_off">🔆 Ekran: Normal</string>
+    <string name="btn_screen_dim_on">🌑 Ekran: Karartılmış</string>
+    <string name="toast_screen_dimmed">🌑 Ekran enerji tasarrufu için karartıldı. Yansıtma devam ediyor.</string>
+    <string name="toast_screen_bright">🔆 Ekran parlaklığı geri yüklendi.</string>
 </resources>

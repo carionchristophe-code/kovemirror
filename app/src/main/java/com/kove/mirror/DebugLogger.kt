@@ -23,9 +23,19 @@ object DebugLogger {
     private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
     private var logFile: File? = null
     private var appContext: Context? = null
+    private var logWriteCount = 0L
+    private const val MAX_LOG_FILE_SIZE_BYTES = 5 * 1024 * 1024L // 5 MB
 
     fun setContext(context: Context) {
         appContext = context.applicationContext
+    }
+
+    private fun checkLogFileSize(file: File) {
+        try {
+            if (file.length() > MAX_LOG_FILE_SIZE_BYTES) {
+                file.writeText("[${timeFormat.format(Date())}] [INFO] --- Log file reached 5MB limit, restarted ---\n")
+            }
+        } catch (_: Exception) {}
     }
 
     fun addListener(listener: (LogEntry) -> Unit) = listeners.add(listener)
@@ -76,6 +86,10 @@ object DebugLogger {
         logFile?.let { file ->
             try {
                 file.appendText(formattedLine + "\n")
+                logWriteCount++
+                if (logWriteCount % 50 == 0L) {
+                    checkLogFileSize(file)
+                }
             } catch (_: Exception) {}
         }
 

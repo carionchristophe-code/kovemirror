@@ -353,4 +353,10 @@
     <string name="about_developer_credit">Designed and developed by H. Nakturk</string>
     <string name="btn_toggle_debug_show">📋 Show Debug Terminal</string>
     <string name="btn_toggle_debug_hide">📋 Hide Debug Terminal</string>
+
+    <!-- Screen Dim (Energy Save) -->
+    <string name="btn_screen_dim_off">🔆 Screen: Normal</string>
+    <string name="btn_screen_dim_on">🌑 Screen: Dimmed</string>
+    <string name="toast_screen_dimmed">🌑 Screen dimmed to save energy. Mirroring continues.</string>
+    <string name="toast_screen_bright">🔆 Screen brightness restored.</string>
 </resources>

@@ -57,6 +57,11 @@ class BleManager(private val context: Context, private val logCallback: (String)
 
     fun disconnect() {
         handler.removeCallbacks(heartbeatRunnable)
+        handler.removeCallbacks(queueRunnable)
+        synchronized(sendQueue) {
+            sendQueue.clear()
+            isProcessingQueue = false
+        }
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
@@ -74,14 +79,20 @@ class BleManager(private val context: Context, private val logCallback: (String)
 
     private val sendQueue = LinkedList<ByteArray>()
     private var isProcessingQueue = false
+    private val queueRunnable = Runnable { processNextQueueItem() }
 
     fun sendRaw(data: ByteArray) {
-        synchronized(sendQueue) {
+        val startProcessing = synchronized(sendQueue) {
             sendQueue.add(data)
+            if (!isProcessingQueue) {
+                isProcessingQueue = true
+                true
+            } else {
+                false
+            }
         }
-        if (!isProcessingQueue) {
-            isProcessingQueue = true
-            processNextQueueItem()
+        if (startProcessing) {
+            handler.post(queueRunnable)
         }
     }
 
@@ -112,9 +123,7 @@ class BleManager(private val context: Context, private val logCallback: (String)
             logCallback("⚠️ BLE not ready, packet dropped")
         }
 
-        handler.postDelayed({
-            processNextQueueItem()
-        }, 150)
+        handler.postDelayed(queueRunnable, 150)
     }
 
     private fun sendHeartbeat() {

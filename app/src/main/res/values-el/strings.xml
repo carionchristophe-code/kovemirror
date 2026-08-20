@@ -353,4 +353,10 @@
     <string name="about_developer_credit">Σχεδιάστηκε και αναπτύχθηκε από τον H. Nakturk</string>
     <string name="btn_toggle_debug_show">📋 Εμφάνιση Terminal Debug</string>
     <string name="btn_toggle_debug_hide">📋 Απόκρυψη Terminal Debug</string>
+
+    <!-- Γείωση Οθόνης (Εξοικονόμηση Ενέργειας) -->
+    <string name="btn_screen_dim_off">🔆 Οθόνη: Κανονική</string>
+    <string name="btn_screen_dim_on">🌑 Οθόνη: Γειωμένη</string>
+    <string name="toast_screen_dimmed">🌑 Η οθόνη γειώθηκε για εξοικονόμηση ενέργειας. Η αντικατοπτρισμός συνεχίζει.</string>
+    <string name="toast_screen_bright">🔆 Η φωτεινότητα οθόνης αποκαταστάθηκε.</string>
 </resources>

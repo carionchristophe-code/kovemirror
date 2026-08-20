@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var isStreaming = false
+    private var isScreenDimmed = false
+    private var originalBrightness = -1.0f
     private var titleClickCount = 0
     private var titleClickTime = 0L
     private var currentAppMode = APP_MODE_MIRRORING
@@ -251,6 +253,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupButtons() {
         binding.btnStartStop.setOnClickListener { onStartStopClick() }
         binding.btnTftPadding.setOnClickListener { showTftPaddingDialog() }
+        binding.btnScreenDim.setOnClickListener { toggleScreenDim() }
         binding.btnShareLogs.setOnClickListener { shareLogs() }
         binding.btnOpenMap.setOnClickListener {
             startActivity(Intent(this, MapActivity::class.java))
@@ -523,6 +526,7 @@ private fun showTftPaddingDialog() {
         binding.btnStartStop.setBackgroundColor(Color.parseColor("#B71C1C"))
         binding.tvStatus.text = getString(R.string.status_control_active)
         binding.tvStatus.setTextColor(Color.parseColor("#FF9800"))
+        binding.btnScreenDim.visibility = View.VISIBLE
 
         DebugLogger.success("🎮 Control Only mode starting...")
 
@@ -626,6 +630,7 @@ private fun showTftPaddingDialog() {
                 binding.btnStartStop.setBackgroundColor(Color.parseColor("#B71C1C"))
                 binding.tvStatus.text = getString(R.string.status_stream_active)
                 binding.tvStatus.setTextColor(Color.parseColor("#EF5350"))
+                binding.btnScreenDim.visibility = View.VISIBLE
                 DebugLogger.success(getString(R.string.log_permission_granted))
                 try {
                     // Also start overlay service for handlebar controls during mirroring
@@ -651,11 +656,13 @@ private fun showTftPaddingDialog() {
         MirrorService.stopService(this)
         HandlebarOverlayService.stopService(this)
         DebugLogger.info(getString(R.string.log_stopped_by_user))
+        restoreScreenBrightness()
         resetToStopped()
     }
 
     private fun resetToStopped() {
         isStreaming = false
+        binding.btnScreenDim.visibility = View.GONE
         if (currentAppMode == APP_MODE_CONTROL_ONLY) {
             binding.btnStartStop.text = getString(R.string.btn_start_controller)
         } else {
@@ -664,6 +671,46 @@ private fun showTftPaddingDialog() {
         binding.btnStartStop.setBackgroundColor(Color.parseColor("#2E7D32"))
         binding.tvStatus.text = getString(R.string.status_stopped)
         binding.tvStatus.setTextColor(Color.parseColor("#AAAAAA"))
+    }
+
+    // ─── Screen Dim (Energy Save) ────────────────────────────────
+
+    private fun toggleScreenDim() {
+        if (isScreenDimmed) {
+            restoreScreenBrightness()
+            Toast.makeText(this, getString(R.string.toast_screen_bright), Toast.LENGTH_SHORT).show()
+        } else {
+            dimScreen()
+            Toast.makeText(this, getString(R.string.toast_screen_dimmed), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun dimScreen() {
+        val layoutParams = window.attributes
+        if (originalBrightness < 0f) {
+            originalBrightness = layoutParams.screenBrightness
+        }
+        // Set to minimum brightness (not 0 which means system default on some devices)
+        layoutParams.screenBrightness = 0.01f
+        window.attributes = layoutParams
+        isScreenDimmed = true
+        binding.btnScreenDim.text = getString(R.string.btn_screen_dim_on)
+        binding.btnScreenDim.setBackgroundColor(Color.parseColor("#D97706"))
+        DebugLogger.info("🌑 Screen dimmed for energy saving")
+    }
+
+    private fun restoreScreenBrightness() {
+        if (isScreenDimmed) {
+            val layoutParams = window.attributes
+            // Restore to original or system default (-1)
+            layoutParams.screenBrightness = if (originalBrightness >= 0f) originalBrightness else -1.0f
+            window.attributes = layoutParams
+            isScreenDimmed = false
+            originalBrightness = -1.0f
+            binding.btnScreenDim.text = getString(R.string.btn_screen_dim_off)
+            binding.btnScreenDim.setBackgroundColor(Color.parseColor("#21262D"))
+            DebugLogger.info("🔆 Screen brightness restored")
+        }
     }
 
     // ─── Bluetooth Selector ───────────────────────────────────────

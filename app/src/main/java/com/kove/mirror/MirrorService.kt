@@ -26,6 +26,7 @@ class MirrorService : Service() {
         const val EXTRA_RESULT_DATA  = "result_data"
         const val CHANNEL_ID         = "KoveMirrorCh"
         const val NOTIF_ID           = 1001
+        const val WAKELOCK_TIMEOUT_MS = 6 * 60 * 60 * 1000L // 6 hours safety timeout
 
         @Volatile var TFT_WIDTH          = 600
         @Volatile var TFT_HEIGHT         = 1024
@@ -170,7 +171,7 @@ class MirrorService : Service() {
                 android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "KoveMirror::AlwaysOn"
             )
-            wakeLock?.acquire()
+            wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
 
             val pm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             val projection = pm.getMediaProjection(resultCode, data) ?: throw NullPointerException("MediaProjection is null")
@@ -223,7 +224,7 @@ class MirrorService : Service() {
                 android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "KoveMirror::AlwaysOn"
             )
-            wakeLock?.acquire()
+            wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
 
             val savedMac = getOrAutoSelectBtMac()
             if (savedMac.isNotEmpty()) {
