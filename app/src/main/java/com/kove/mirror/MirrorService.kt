@@ -383,8 +383,10 @@ class MirrorService : Service() {
                             ConnectivityManager.setProcessDefaultNetwork(network)
                             DebugLogger.success(getString(R.string.log_wifi_bound_process_legacy))
                         }
-                        Handler(Looper.getMainLooper()).post {
-                            startTcpServer()
+                        if (!tcpServerStarted || tcpServer == null) {
+                            Handler(Looper.getMainLooper()).post {
+                                startTcpServer()
+                            }
                         }
                     } catch (e: Exception) {
                         DebugLogger.error("❌ Error binding to network: ${e.message}")

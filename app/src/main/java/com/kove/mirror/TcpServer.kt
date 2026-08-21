@@ -28,34 +28,35 @@ class TcpServer(
     }
 
     // ServerSockets
-    private var videoServerSocket: ServerSocket? = null
-    private var controlServerSocket: ServerSocket? = null
-    private var heartbeatServerSocket: ServerSocket? = null
+    @Volatile private var videoServerSocket: ServerSocket? = null
+    @Volatile private var controlServerSocket: ServerSocket? = null
+    @Volatile private var heartbeatServerSocket: ServerSocket? = null
 
     // ClientSockets
-    private var videoClientSocket: Socket? = null
-    private var controlClientSocket: Socket? = null
-    private var heartbeatClientSocket: Socket? = null
+    @Volatile private var videoClientSocket: Socket? = null
+    @Volatile private var controlClientSocket: Socket? = null
+    @Volatile private var heartbeatClientSocket: Socket? = null
 
     // OutputStreams
-    private var videoOutputStream: OutputStream? = null
-    private var controlOutputStream: OutputStream? = null
+    @Volatile private var videoOutputStream: OutputStream? = null
+    @Volatile private var controlOutputStream: OutputStream? = null
+    private val videoWriteLock = Any()
 
     private val running    = AtomicBoolean(false)
     private val connected  = AtomicBoolean(false)
     val bytesSent          = AtomicLong(0)
 
     // Threads
-    private var videoServerThread: Thread? = null
-    private var controlServerThread: Thread? = null
-    private var heartbeatServerThread: Thread? = null
+    @Volatile private var videoServerThread: Thread? = null
+    @Volatile private var controlServerThread: Thread? = null
+    @Volatile private var heartbeatServerThread: Thread? = null
 
-    private var videoReaderThread: Thread? = null
-    private var controlReaderThread: Thread? = null
+    @Volatile private var videoReaderThread: Thread? = null
+    @Volatile private var controlReaderThread: Thread? = null
 
-    private var videoHeartbeatThread: Thread? = null
-    private var controlHeartbeatThread: Thread? = null
-    private var dedicatedHeartbeatThread: Thread? = null
+    @Volatile private var videoHeartbeatThread: Thread? = null
+    @Volatile private var controlHeartbeatThread: Thread? = null
+    @Volatile private var dedicatedHeartbeatThread: Thread? = null
 
     // ─── Public API ──────────────────────────────────────────────
 
@@ -113,27 +114,33 @@ class TcpServer(
         heartbeatClientSocket = null
         heartbeatServerSocket = null
 
-        videoOutputStream = null
+        synchronized(videoWriteLock) {
+            videoOutputStream = null
+        }
         controlOutputStream = null
 
         DebugLogger.info(R.string.log_tcp_all_closed)
     }
 
     fun isClientConnected(): Boolean = connected.get() &&
-            videoClientSocket?.isClosed == false &&
-            videoClientSocket?.isConnected == true
+            videoClientSocket?.isClosed == false
 
     /**
      * H.264 NAL unit'lerini bağlı TFT'ye (Port 15456) gönder.
      */
     fun writeData(data: ByteArray): Boolean {
         return try {
-            videoOutputStream?.write(data)
-            videoOutputStream?.flush()
+            synchronized(videoWriteLock) {
+                val os = videoOutputStream ?: return false
+                os.write(data)
+                os.flush()
+            }
             bytesSent.addAndGet(data.size.toLong())
             true
         } catch (e: IOException) {
             DebugLogger.error(R.string.log_write_data_error, e.message ?: "")
+            connected.set(false)
+            try { videoClientSocket?.close() } catch (_: Exception) {}
             false
         }
     }
@@ -177,14 +184,16 @@ class TcpServer(
     private fun handleVideoClient(socket: Socket) {
         try {
             val os = socket.getOutputStream()
-            videoOutputStream = os
+            synchronized(videoWriteLock) {
+                videoOutputStream = os
+            }
             connected.set(true)
 
             // 1. VideoSize header gönder (69 byte)
             sendVideoSizeHeader(os)
 
             // 2. TFT'den gelen verileri oku (TFT geri bildirim yapabilir)
-            startTftVideoReader(socket.getInputStream())
+            startTftVideoReader(socket, socket.getInputStream())
 
             // 3. Start heartbeat / Heartbeat başlat (Port 15456 üzerinde 2s aralıklarla)
             startVideoHeartbeat(os)
@@ -192,16 +201,20 @@ class TcpServer(
             // 4. Callback tetikle (Video encoder'ı başlatır)
             onConnected(os)
 
-            while (running.get() && !socket.isClosed && socket.isConnected) {
-                Thread.sleep(500)
+            while (running.get() && connected.get() && !socket.isClosed) {
+                Thread.sleep(200)
             }
         } catch (e: Exception) {
             DebugLogger.error(R.string.log_video_accept_error, e.message ?: "")
         } finally {
             connected.set(false)
-            videoOutputStream = null
+            synchronized(videoWriteLock) {
+                videoOutputStream = null
+            }
             videoHeartbeatThread?.interrupt()
             videoHeartbeatThread = null
+            videoReaderThread?.interrupt()
+            videoReaderThread = null
             try { socket.close() } catch (_: Exception) {}
             DebugLogger.warning(R.string.log_tft_video_conn_lost)
             onDisconnected()
@@ -215,11 +228,18 @@ class TcpServer(
             try {
                 while (running.get() && isClientConnected()) {
                     Thread.sleep(2000)
-                    os.write(packet)
-                    os.flush()
+                    synchronized(videoWriteLock) {
+                        if (isClientConnected() && videoOutputStream != null) {
+                            os.write(packet)
+                            os.flush()
+                        }
+                    }
                     DebugLogger.heartbeat(R.string.log_hb_sent, 0, "Video-15456")
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                connected.set(false)
+                try { videoClientSocket?.close() } catch (_: Exception) {}
+            }
         }, "KoveMirror-VideoHeartbeat").also {
             it.isDaemon = true
             it.start()
@@ -229,14 +249,16 @@ class TcpServer(
     private fun sendVideoSizeHeader(os: OutputStream) {
         val buf = ByteArray(69)
         val name = "android".toByteArray(StandardCharsets.UTF_8)
-        System.arraycopy(name, 0, buf, 1, minOf(name.size, 64))
+        System.arraycopy(name, 0, buf, 0, minOf(name.size, 65))
         buf[65] = ((width  shr 8) and 0xFF).toByte()
         buf[66] = (width          and 0xFF).toByte()
         buf[67] = ((height shr 8) and 0xFF).toByte()
         buf[68] = (height         and 0xFF).toByte()
 
-        os.write(buf)
-        os.flush()
+        synchronized(videoWriteLock) {
+            os.write(buf)
+            os.flush()
+        }
 
         val hexPreview = buf.take(10).joinToString(" ") { "%02X".format(it) }
         DebugLogger.data("📤 VideoSize header -> Port $PORT_VIDEO:")
@@ -244,12 +266,12 @@ class TcpServer(
         DebugLogger.data("   Width: $width px | Height: $height px")
     }
 
-    private fun startTftVideoReader(inputStream: InputStream) {
+    private fun startTftVideoReader(socket: Socket, inputStream: InputStream) {
         videoReaderThread = Thread({
             DebugLogger.info("👂 TFT video reader started")
             val buf = ByteArray(4096)
             try {
-                while (running.get() && connected.get()) {
+                while (running.get() && connected.get() && !socket.isClosed) {
                     val n = inputStream.read(buf)
                     if (n == -1) break
                     if (n > 0) {
@@ -258,8 +280,12 @@ class TcpServer(
                         DebugLogger.data("📥 TFT->Phone (Video-15456): [$preview$more] total=$n byte")
                     }
                 }
-            } catch (_: Exception) {}
-            DebugLogger.info("👂 TFT video reader stopped")
+            } catch (_: Exception) {
+            } finally {
+                connected.set(false)
+                try { socket.close() } catch (_: Exception) {}
+                DebugLogger.info("👂 TFT video reader stopped")
+            }
         }, "KoveMirror-TftVideoReader").also {
             it.isDaemon = true
             it.start()
@@ -311,50 +337,154 @@ class TcpServer(
             val inputStream = socket.getInputStream()
             controlReaderThread = Thread({
                 DebugLogger.info("👂 TFT control reader started")
-                val buf = ByteArray(4096)
+                val readBuf = ByteArray(4096)
+                val buffer = java.io.ByteArrayOutputStream()
+
+                fun triggerHandshake() {
+                    if (!handshakeCompleted) {
+                        handshakeCompleted = true
+                        Thread.sleep(100)
+                        sendBinaryControlHandshake(os)
+                        sendJsonControlPacket(os, "{\"msg_id\":27,\"func\":\"INSIDENAVI\",\"query\":2}")
+                        sendJsonControlPacket(os, "{\"msg_id\":27,\"func\":\"INSIDENAVI\",\"query\":1}")
+                        DebugLogger.success(R.string.log_control_handshake_done)
+                    }
+                }
+
                 try {
-                    while (running.get() && controlClientSocket?.isClosed == false) {
-                        val n = inputStream.read(buf)
+                    while (running.get() && !socket.isClosed) {
+                        val n = inputStream.read(readBuf)
                         if (n == -1) break
                         if (n > 0) {
-                            val preview = buf.take(minOf(n, 20)).joinToString(" ") { "%02X".format(it) }
+                            val preview = readBuf.take(minOf(n, 20)).joinToString(" ") { "%02X".format(it) }
                             val more = if (n > 20) " (+${n - 20}B)" else ""
                             DebugLogger.data("📥 TFT->Phone (Control-17818): [$preview$more] total=$n byte")
-                            
-                            try {
-                                val text = String(buf, 0, n, StandardCharsets.UTF_8).filter { it.code in 32..126 }
-                                if (text.isNotBlank()) {
-                                    DebugLogger.info("   [ASCII Text]: $text")
-                                    HandlebarKeyManager.processJson(text)
+
+                            buffer.write(readBuf, 0, n)
+
+                            // Deframing loop
+                            while (buffer.size() > 0) {
+                                val bytes = buffer.toByteArray()
+
+                                // 1. Check for 6-byte Heartbeat: 02 01 00 00 00 00
+                                if (bytes.size >= 6 &&
+                                    bytes[0] == 0x02.toByte() &&
+                                    bytes[1] == 0x01.toByte() &&
+                                    bytes[2] == 0x00.toByte() &&
+                                    bytes[3] == 0x00.toByte() &&
+                                    bytes[4] == 0x00.toByte() &&
+                                    bytes[5] == 0x00.toByte()
+                                ) {
+                                    os.write(bytes, 0, 6)
+                                    os.flush()
+                                    triggerHandshake()
+
+                                    buffer.reset()
+                                    if (bytes.size > 6) {
+                                        buffer.write(bytes, 6, bytes.size - 6)
+                                    }
+                                    continue
                                 }
-                            } catch (_: Exception) {}
 
-                            // Control Port Heartbeat Echo
-                            if (n == 6 && buf[0] == 0x02.toByte() && buf[1] == 0x01.toByte() && buf[2] == 0x00.toByte()) {
-                                os.write(buf, 0, 6)
-                                os.flush()
-                            }
+                                // 2. Check for Framed JSON packet: EE FD [len 4 BE] [payload] FF
+                                if (bytes.size >= 2 && bytes[0] == 0xEE.toByte() && bytes[1] == 0xFD.toByte()) {
+                                    if (bytes.size < 6) {
+                                        // Wait for length header
+                                        break
+                                    }
+                                    val len = ((bytes[2].toInt() and 0xFF) shl 24) or
+                                            ((bytes[3].toInt() and 0xFF) shl 16) or
+                                            ((bytes[4].toInt() and 0xFF) shl 8) or
+                                            (bytes[5].toInt() and 0xFF)
 
-                            // TFT'den ilk veri geldiğinde kalan el sıkışmayı tamamla
-                            if (!handshakeCompleted) {
-                                handshakeCompleted = true
-                                Thread.sleep(100)
-                                sendBinaryControlHandshake(os)
-                                sendJsonControlPacket(os, "{\"msg_id\":27,\"func\":\"INSIDENAVI\",\"query\":2}")
-                                sendJsonControlPacket(os, "{\"msg_id\":27,\"func\":\"INSIDENAVI\",\"query\":1}")
-                                DebugLogger.success(R.string.log_control_handshake_done)
+                                    if (len < 0 || len > 65536) {
+                                        // Invalid length, discard header to resync
+                                        DebugLogger.warning("⚠️ Invalid control frame length: $len, resyncing...")
+                                        buffer.reset()
+                                        if (bytes.size > 2) {
+                                            buffer.write(bytes, 2, bytes.size - 2)
+                                        }
+                                        continue
+                                    }
+
+                                    val frameLen = 2 + 4 + len + 1
+                                    if (bytes.size < frameLen) {
+                                        // Full frame not received yet, wait for more data
+                                        break
+                                    }
+
+                                    val payload = String(bytes, 6, len, StandardCharsets.UTF_8)
+                                    DebugLogger.info("   [Control JSON]: $payload")
+                                    HandlebarKeyManager.processJson(payload)
+                                    triggerHandshake()
+
+                                    buffer.reset()
+                                    if (bytes.size > frameLen) {
+                                        buffer.write(bytes, frameLen, bytes.size - frameLen)
+                                    }
+                                    continue
+                                }
+
+                                // 3. Check for raw JSON starting with '{'
+                                if (bytes[0] == '{'.code.toByte()) {
+                                    var depth = 0
+                                    var jsonEnd = -1
+                                    for (i in bytes.indices) {
+                                        if (bytes[i] == '{'.code.toByte()) depth++
+                                        else if (bytes[i] == '}'.code.toByte()) {
+                                            depth--
+                                            if (depth == 0) {
+                                                jsonEnd = i
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if (jsonEnd != -1) {
+                                        val jsonStr = String(bytes, 0, jsonEnd + 1, StandardCharsets.UTF_8)
+                                        DebugLogger.info("   [Raw JSON]: $jsonStr")
+                                        HandlebarKeyManager.processJson(jsonStr)
+                                        triggerHandshake()
+
+                                        buffer.reset()
+                                        if (bytes.size > jsonEnd + 1) {
+                                            buffer.write(bytes, jsonEnd + 1, bytes.size - (jsonEnd + 1))
+                                        }
+                                        continue
+                                    } else {
+                                        // Incomplete raw JSON, wait for more bytes
+                                        break
+                                    }
+                                }
+
+                                // 4. Unrecognized byte: scan forward to find next known header (0x02, 0xEE, '{')
+                                var syncIdx = -1
+                                for (i in 1 until bytes.size) {
+                                    if (bytes[i] == 0x02.toByte() || bytes[i] == 0xEE.toByte() || bytes[i] == '{'.code.toByte()) {
+                                        syncIdx = i
+                                        break
+                                    }
+                                }
+                                if (syncIdx != -1) {
+                                    buffer.reset()
+                                    buffer.write(bytes, syncIdx, bytes.size - syncIdx)
+                                } else {
+                                    buffer.reset()
+                                }
                             }
                         }
                     }
-                } catch (_: Exception) {}
-                DebugLogger.info("👂 TFT control reader stopped")
+                } catch (_: Exception) {
+                } finally {
+                    try { socket.close() } catch (_: Exception) {}
+                    DebugLogger.info("👂 TFT control reader stopped")
+                }
             }, "KoveMirror-TftControlReader").also {
                 it.isDaemon = true
                 it.start()
             }
 
-            while (running.get() && !socket.isClosed && socket.isConnected) {
-                Thread.sleep(500)
+            while (running.get() && !socket.isClosed) {
+                Thread.sleep(200)
             }
         } catch (e: Exception) {
             DebugLogger.error("❌ Control client error: ${e.message}")
@@ -421,9 +551,13 @@ class TcpServer(
                 try {
                     ss.soTimeout = ACCEPT_TIMEOUT_MS
                     val socket = ss.accept() ?: continue
+                    
+                    // Close previous socket if still open
+                    try { heartbeatClientSocket?.close() } catch (_: Exception) {}
                     heartbeatClientSocket = socket
+
                     DebugLogger.success(R.string.log_tft_dedicated_hb_connected, socket.inetAddress.hostAddress ?: "", socket.port)
-                    startDedicatedHeartbeat(socket.getOutputStream())
+                    startDedicatedHeartbeat(socket)
                 } catch (e: SocketTimeoutException) {
                 } catch (e: IOException) {
                     if (running.get()) Thread.sleep(1000)
@@ -434,14 +568,15 @@ class TcpServer(
         }
     }
 
-    private fun startDedicatedHeartbeat(os: OutputStream) {
+    private fun startDedicatedHeartbeat(socket: Socket) {
         dedicatedHeartbeatThread?.interrupt()
         dedicatedHeartbeatThread = Thread({
             val packet = byteArrayOf(0x02, 0x01, 0x00, 0x00, 0x00, 0x00)
             DebugLogger.info(R.string.log_dedicated_hb_started)
             var count = 0L
             try {
-                while (running.get() && heartbeatClientSocket?.isClosed == false && heartbeatClientSocket?.isConnected == true) {
+                val os = socket.getOutputStream()
+                while (running.get() && !socket.isClosed) {
                     os.write(packet)
                     os.flush()
                     count++
@@ -452,6 +587,11 @@ class TcpServer(
                 }
             } catch (e: Exception) {
                 DebugLogger.warning(R.string.log_dedicated_hb_stopped, e.message ?: "")
+            } finally {
+                try { socket.close() } catch (_: Exception) {}
+                if (heartbeatClientSocket == socket) {
+                    heartbeatClientSocket = null
+                }
             }
         }, "KoveMirror-DedicatedHeartbeat").also {
             it.isDaemon = true

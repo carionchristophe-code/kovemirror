@@ -61,6 +61,8 @@ object HandlebarKeyManager {
     // ─── Auto-Confirm Dwell Timer (1.5 seconds) ────────────
     private var autoConfirmRunnable: Runnable? = null
     private const val AUTO_CONFIRM_DELAY_MS = 1500L
+    private var menuOpenedTimeMs = 0L
+    private const val MENU_OPEN_DEBOUNCE_MS = 400L
 
     // ─── Callbacks for Overlay & Actions ────────────────────
     var onOverlayToggle: ((Boolean) -> Unit)? = null
@@ -108,6 +110,12 @@ object HandlebarKeyManager {
                 startAutoConfirmTimer()
             }
             HandlebarKey.ENTER, HandlebarKey.ESC -> {
+                // Ignore trailing ESC/ENT sent rapidly by TFT firmware right after opening menu
+                val elapsed = System.currentTimeMillis() - menuOpenedTimeMs
+                if (elapsed < MENU_OPEN_DEBOUNCE_MS) {
+                    DebugLogger.info("🎮 Ignoring trailing $key (${elapsed}ms < ${MENU_OPEN_DEBOUNCE_MS}ms) after menu open")
+                    return
+                }
                 // Both ENTER and ESC confirm the currently highlighted selection while overlay is open!
                 // This solves the Kove TFT hardware behavior where a second ENT press sends ESC (status 0).
                 confirmCurrentSelection()
@@ -130,6 +138,7 @@ object HandlebarKeyManager {
                 // ALWAYS reset highlightedIndex to 0 ("Get back to my location")
                 // This eliminates any state desync caused by TFT hardware Play/Pause toggling.
                 isOverlayMenuOpen = true
+                menuOpenedTimeMs = System.currentTimeMillis()
                 highlightedIndex = 0
                 onOverlayToggle?.invoke(true)
                 onHighlightChanged?.invoke(highlightedIndex)

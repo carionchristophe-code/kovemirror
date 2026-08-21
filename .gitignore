@@ -17,3 +17,4 @@ thinkerride_logs/
 # Bug reports and zip archives
 *.zip
 *.tar.gz
+version.properties

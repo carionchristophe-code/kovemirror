@@ -55,6 +55,7 @@ class ProjectionEncoder(
     private var inputSurface:     Surface?            = null
     private var virtualDisplay:   VirtualDisplay?     = null
     private var oesRenderer:      OesTextureRenderer? = null
+    private var encoderThread:    Thread?             = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val streaming    = AtomicBoolean(false)
@@ -190,7 +191,7 @@ class ProjectionEncoder(
             return
         }
 
-        Thread({
+        encoderThread = Thread({
             DebugLogger.info(R.string.log_encoding_loop_started)
             val bufInfo     = MediaCodec.BufferInfo()
             var lastStatMs  = System.currentTimeMillis()
@@ -262,16 +263,21 @@ class ProjectionEncoder(
 
     fun stop() {
         streaming.set(false)
+        try {
+            encoderThread?.interrupt()
+            encoderThread?.join(500L)
+        } catch (_: Exception) {}
+        encoderThread = null
+
+        try { virtualDisplay?.release() } catch (_: Exception) {}
         try { oesRenderer?.release() } catch (_: Exception) {}
         try { mediaCodec?.stop()    } catch (_: Exception) {}
         try { mediaCodec?.release() } catch (_: Exception) {}
         try { inputSurface?.release()   } catch (_: Exception) {}
-        try { virtualDisplay?.release() } catch (_: Exception) {}
-        try { mediaProjection.stop()    } catch (_: Exception) {}
+        virtualDisplay = null
         oesRenderer    = null
         mediaCodec     = null
         inputSurface   = null
-        virtualDisplay = null
         DebugLogger.info(R.string.log_encoder_stopped)
     }
 

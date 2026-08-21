@@ -51,9 +51,9 @@ class KoveAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Screen dimensions (updated on config change)
-        private var screenWidth = 1080
-        private var screenHeight = 1920
+        // Screen dimensions (updated on config change or dynamically per gesture)
+        @Volatile private var screenWidth = 1080
+        @Volatile private var screenHeight = 1920
 
         fun updateScreenSize(w: Int, h: Int) {
             screenWidth = w
@@ -63,25 +63,35 @@ class KoveAccessibilityService : AccessibilityService() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private fun refreshScreenSize() {
+        try {
+            val wm = getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bounds = wm.currentWindowMetrics.bounds
+                screenWidth = bounds.width()
+                screenHeight = bounds.height()
+            } else {
+                val metrics = android.util.DisplayMetrics()
+                @Suppress("DEPRECATION")
+                wm.defaultDisplay.getRealMetrics(metrics)
+                screenWidth = metrics.widthPixels
+                screenHeight = metrics.heightPixels
+            }
+        } catch (_: Exception) {}
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         DebugLogger.info("♿ KoveAccessibilityService connected")
-
-        // Get screen size
-        val wm = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val bounds = wm.currentWindowMetrics.bounds
-            screenWidth = bounds.width()
-            screenHeight = bounds.height()
-        } else {
-            val metrics = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealMetrics(metrics)
-            screenWidth = metrics.widthPixels
-            screenHeight = metrics.heightPixels
-        }
+        refreshScreenSize()
         DebugLogger.info("♿ Screen size: ${screenWidth}x${screenHeight}")
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshScreenSize()
+        DebugLogger.info("♿ Accessibility screen size refreshed on config change: ${screenWidth}x${screenHeight}")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -107,6 +117,7 @@ class KoveAccessibilityService : AccessibilityService() {
     fun performZoom(zoomIn: Boolean) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
 
+        refreshScreenSize()
         val cx = screenWidth / 2f
         val cy = screenHeight / 2f
         val startGap = 15f
@@ -147,6 +158,7 @@ class KoveAccessibilityService : AccessibilityService() {
     fun performPan(direction: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
 
+        refreshScreenSize()
         val cx = screenWidth / 2f
         val cy = screenHeight / 2f
         val swipeDistance = (screenHeight / 16f).coerceIn(80f, 150f) // Small, fine pan distance (~100px)

@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var titleClickCount = 0
     private var titleClickTime = 0L
     private var currentAppMode = APP_MODE_MIRRORING
+    private var logListener: ((LogEntry) -> Unit)? = null
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
@@ -297,7 +298,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Setup Debug Terminal
-        DebugLogger.addListener { entry ->
+        val listener: (LogEntry) -> Unit = { entry ->
             uiHandler.post {
                 val currentText = binding.tvDebugLog.text.toString()
                 val lines = currentText.split("\n")
@@ -317,6 +318,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        logListener = listener
+        DebugLogger.addListener(listener)
     }
 
     private fun shareLogs() {
@@ -839,5 +842,12 @@ private fun showTftPaddingDialog() {
                 DebugLogger.warning(getString(R.string.log_bt_permissions_denied))
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        logListener?.let { DebugLogger.removeListener(it) }
+        logListener = null
+        uiHandler.removeCallbacksAndMessages(null)
     }
 }

@@ -1,14 +1,17 @@
 package com.kove.mirror
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.util.*
 
-@SuppressLint("MissingPermission")
 class BleManager(private val context: Context, private val logCallback: (String) -> Unit) {
 
     companion object {
@@ -18,11 +21,13 @@ class BleManager(private val context: Context, private val logCallback: (String)
         val CLIENT_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 
-    private var bluetoothGatt: BluetoothGatt? = null
-    private var writeChar: BluetoothGattCharacteristic? = null
+    @Volatile private var bluetoothGatt: BluetoothGatt? = null
+    @Volatile private var writeChar: BluetoothGattCharacteristic? = null
     private val handler = Handler(Looper.getMainLooper())
-    private var isConnected = false
-    private var targetMac: String? = null
+    @Volatile private var isConnected = false
+    @Volatile private var isStopping = false
+    @Volatile private var reconnectAttempt = 0
+    @Volatile private var targetMac: String? = null
 
     var onMirrorRequested: (() -> Unit)? = null
 
@@ -35,37 +40,103 @@ class BleManager(private val context: Context, private val logCallback: (String)
         }
     }
 
+    private val reconnectRunnable = Runnable {
+        if (!isStopping && !isConnected) {
+            val mac = targetMac
+            if (!mac.isNullOrEmpty()) {
+                logCallback("🔄 BLE reconnecting to $mac (attempt ${reconnectAttempt + 1})...")
+                doConnect(mac)
+            }
+        }
+    }
+
+    fun hasBluetoothPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
     fun connect(macAddress: String) {
-        disconnect()
+        isStopping = false
+        reconnectAttempt = 0
         targetMac = macAddress
+        doConnect(macAddress)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun doConnect(macAddress: String) {
+        cleanupGatt()
+
+        if (!hasBluetoothPermission()) {
+            logCallback("⚠️ BLUETOOTH_CONNECT permission not granted. Please grant Nearby Devices permission in app settings.")
+            return
+        }
+
         logCallback(DebugLogger.getString(R.string.log_ble_conn_starting, macAddress))
-        
-        val adapter = BluetoothAdapter.getDefaultAdapter() ?: run {
+
+        val adapter = try {
+            BluetoothAdapter.getDefaultAdapter()
+        } catch (e: SecurityException) {
+            logCallback("❌ Bluetooth permission denied: ${e.message}")
+            return
+        } ?: run {
             logCallback(DebugLogger.getString(R.string.log_ble_not_supported))
             return
         }
-        
+
         val device = try {
             adapter.getRemoteDevice(macAddress)
+        } catch (e: SecurityException) {
+            logCallback("❌ Bluetooth permission denied for remote device: ${e.message}")
+            return
         } catch (e: Exception) {
             logCallback(DebugLogger.getString(R.string.log_ble_invalid_mac, e.message ?: ""))
             return
         }
 
-        bluetoothGatt = device.connectGatt(context, false, gattCallback)
+        try {
+            bluetoothGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        } catch (e: SecurityException) {
+            logCallback("❌ SecurityException connecting BLE: ${e.message}. Please grant Nearby Devices permission.")
+        } catch (e: Exception) {
+            logCallback("❌ Error connecting BLE: ${e.message}")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun cleanupGatt() {
+        bluetoothGatt?.let { gatt ->
+            try { gatt.disconnect() } catch (_: Exception) {}
+            try { gatt.close() } catch (_: Exception) {}
+        }
+        bluetoothGatt = null
+        writeChar = null
+    }
+
+    private fun scheduleReconnect() {
+        if (isStopping) return
+        val delay = minOf(1000L * (1 shl reconnectAttempt), 16000L)
+        reconnectAttempt++
+        logCallback("⏳ BLE retry in ${delay / 1000}s (attempt $reconnectAttempt)...")
+        handler.removeCallbacks(reconnectRunnable)
+        handler.postDelayed(reconnectRunnable, delay)
     }
 
     fun disconnect() {
+        isStopping = true
+        handler.removeCallbacks(reconnectRunnable)
         handler.removeCallbacks(heartbeatRunnable)
         handler.removeCallbacks(queueRunnable)
         synchronized(sendQueue) {
             sendQueue.clear()
-            isProcessingQueue = false
         }
-        bluetoothGatt?.disconnect()
-        bluetoothGatt?.close()
-        bluetoothGatt = null
-        writeChar = null
+        isDrainScheduled = false
+        cleanupGatt()
         if (isConnected) {
             isConnected = false
             logCallback(DebugLogger.getString(R.string.log_ble_disconnected))
@@ -78,52 +149,71 @@ class BleManager(private val context: Context, private val logCallback: (String)
     }
 
     private val sendQueue = LinkedList<ByteArray>()
-    private var isProcessingQueue = false
-    private val queueRunnable = Runnable { processNextQueueItem() }
+    private var isDrainScheduled = false
 
-    fun sendRaw(data: ByteArray) {
-        val startProcessing = synchronized(sendQueue) {
-            sendQueue.add(data)
-            if (!isProcessingQueue) {
-                isProcessingQueue = true
-                true
+    private val queueRunnable = object : Runnable {
+        @SuppressLint("MissingPermission")
+        override fun run() {
+            val data = synchronized(sendQueue) {
+                if (sendQueue.isEmpty()) {
+                    isDrainScheduled = false
+                    null
+                } else {
+                    sendQueue.removeFirst()
+                }
+            } ?: return
+
+            val gatt = bluetoothGatt
+            val char = writeChar
+
+            if (gatt != null && char != null) {
+                try {
+                    char.value = data
+                    char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                    val success = gatt.writeCharacteristic(char)
+                    if (!success) {
+                        logCallback("⚠️ BLE packet write error, retrying in 150ms")
+                        synchronized(sendQueue) {
+                            sendQueue.addFirst(data)
+                        }
+                    }
+                } catch (e: SecurityException) {
+                    logCallback("❌ BLE write permission error: ${e.message}")
+                } catch (e: Exception) {
+                    logCallback("⚠️ BLE write exception: ${e.message}")
+                }
             } else {
-                false
+                logCallback("⚠️ BLE not ready, packet dropped")
             }
-        }
-        if (startProcessing) {
-            handler.post(queueRunnable)
+
+            val hasMore = synchronized(sendQueue) { sendQueue.isNotEmpty() }
+            if (hasMore) {
+                isDrainScheduled = true
+                handler.postDelayed(this, 150)
+            } else {
+                isDrainScheduled = false
+            }
         }
     }
 
-    private fun processNextQueueItem() {
-        val data = synchronized(sendQueue) {
-            if (sendQueue.isEmpty()) {
-                isProcessingQueue = false
-                null
-            } else {
-                sendQueue.removeFirst()
-            }
-        } ?: return
-
-        val gatt = bluetoothGatt
-        val char = writeChar
-
-        if (gatt != null && char != null) {
-            char.value = data
-            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            val success = gatt.writeCharacteristic(char)
-            if (!success) {
-                logCallback("⚠️ BLE packet write error, retrying in 150ms")
-                synchronized(sendQueue) {
-                    sendQueue.addFirst(data)
-                }
-            }
-        } else {
-            logCallback("⚠️ BLE not ready, packet dropped")
+    fun sendRaw(data: ByteArray) {
+        synchronized(sendQueue) {
+            sendQueue.add(data)
         }
+        handler.post {
+            ensureDrainerRunning()
+        }
+    }
 
-        handler.postDelayed(queueRunnable, 150)
+    private fun ensureDrainerRunning() {
+        if (!isDrainScheduled) {
+            val hasItems = synchronized(sendQueue) { sendQueue.isNotEmpty() }
+            if (hasItems) {
+                isDrainScheduled = true
+                handler.removeCallbacks(queueRunnable)
+                handler.post(queueRunnable)
+            }
+        }
     }
 
     private fun sendHeartbeat() {
@@ -141,14 +231,38 @@ class BleManager(private val context: Context, private val logCallback: (String)
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                logCallback("🔴 Bluetooth connection error: status=$status, newState=$newState")
+                isConnected = false
+                handler.removeCallbacks(heartbeatRunnable)
+                try { gatt.close() } catch (_: Exception) {}
+                if (bluetoothGatt == gatt) {
+                    bluetoothGatt = null
+                    writeChar = null
+                }
+                scheduleReconnect()
+                return
+            }
+
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 logCallback("🟢 Bluetooth connected, discovering services...")
-                gatt.discoverServices()
+                try {
+                    gatt.discoverServices()
+                } catch (e: SecurityException) {
+                    logCallback("❌ Permission error discovering services: ${e.message}")
+                }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 isConnected = false
                 logCallback("🔴 Bluetooth connection lost (GATT disconnected)")
                 handler.removeCallbacks(heartbeatRunnable)
+                try { gatt.close() } catch (_: Exception) {}
+                if (bluetoothGatt == gatt) {
+                    bluetoothGatt = null
+                    writeChar = null
+                }
+                scheduleReconnect()
             }
         }
 
@@ -172,12 +286,19 @@ class BleManager(private val context: Context, private val logCallback: (String)
                         enableNotification(gatt, notifyChar)
                     } else {
                         logCallback("❌ Required BLE characteristics not found")
+                        tryAlternativeServices(gatt)
                     }
                 } else {
                     tryAlternativeServices(gatt)
                 }
             } else {
                 logCallback("❌ BLE Service discovery failed: status=$status")
+                try { gatt.close() } catch (_: Exception) {}
+                if (bluetoothGatt == gatt) {
+                    bluetoothGatt = null
+                    writeChar = null
+                }
+                scheduleReconnect()
             }
         }
 
@@ -185,11 +306,18 @@ class BleManager(private val context: Context, private val logCallback: (String)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 logCallback("✅ BLE Handshake (Notification) active!")
                 isConnected = true
+                reconnectAttempt = 0
                 
                 sendInitPackets()
                 handler.post(heartbeatRunnable)
             } else {
                 logCallback("❌ Descriptor write failed: status=$status")
+                try { gatt.close() } catch (_: Exception) {}
+                if (bluetoothGatt == gatt) {
+                    bluetoothGatt = null
+                    writeChar = null
+                }
+                scheduleReconnect()
             }
         }
 
@@ -259,14 +387,25 @@ class BleManager(private val context: Context, private val logCallback: (String)
         }
 
         logCallback("❌ No compatible ThinkerRide BLE service found")
+        try { gatt.close() } catch (_: Exception) {}
+        if (bluetoothGatt == gatt) {
+            bluetoothGatt = null
+            writeChar = null
+        }
+        scheduleReconnect()
     }
 
+    @SuppressLint("MissingPermission")
     private fun enableNotification(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        gatt.setCharacteristicNotification(characteristic, true)
-        val descriptor = characteristic.getDescriptor(CLIENT_CONFIG_UUID)
-        if (descriptor != null) {
-            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            gatt.writeDescriptor(descriptor)
+        try {
+            gatt.setCharacteristicNotification(characteristic, true)
+            val descriptor = characteristic.getDescriptor(CLIENT_CONFIG_UUID)
+            if (descriptor != null) {
+                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                gatt.writeDescriptor(descriptor)
+            }
+        } catch (e: SecurityException) {
+            logCallback("❌ SecurityException enabling notification: ${e.message}")
         }
     }
 
