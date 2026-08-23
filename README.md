@@ -10,6 +10,12 @@ KoveMirror, Kove 800 (800X Pro vb.) model motosikletlerin TFT ekranlarına telef
 
 Motosikletin navigasyon için TFT ekranında gösterdiği görüntüyü, herhangi bir üçüncü taraf uygulamaya bağımlı kalmadan Google Maps, Yandex Navigasyon gibi kendi istediğiniz uygulamalarla kullanabilmenizi sağlar. Ayrıca uygulama içinde yerleşik **Harita, Rota Import (GPX/KML/KMZ) ve Adım Adım Navigasyon** alt özelliği bulunur.
 
+<p align="center">
+  <img src="screenshots/main_screen.png" width="32%" alt="KoveMirror Ana Ekran" />
+  &nbsp; &nbsp; &nbsp; &nbsp;
+  <img src="screenshots/map_screen.png" width="32%" alt="Harita ve Rota Ekranı" />
+</p>
+
 ---
 
 ## 🗺️ Harita ve Navigasyon Özellikleri
@@ -100,6 +106,12 @@ Projeyi Android Studio'da açıp `Build -> Make Project` diyerek ya da komut sat
 KoveMirror is an open-source Android application that enables screen mirroring from your smartphone directly to the TFT dashboard of Kove 800 motorcycles (like the 800X Pro). Built as an alternative to the official ThinkerRide system, it operates entirely locally over the motorcycle's network.
 
 This allows you to project any app of your choice (such as Google Maps, Waze, or Spotify) onto your motorcycle’s screen without being tied to restrictive third-party navigation apps. It also includes an offline-friendly built-in **Map, Route Import (GPX/KML/KMZ), and Turn-by-Turn Navigation** module.
+
+<p align="center">
+  <img src="screenshots/main_screen.png" width="32%" alt="KoveMirror Main Screen" />
+  &nbsp; &nbsp; &nbsp; &nbsp;
+  <img src="screenshots/map_screen.png" width="32%" alt="Map & Route Screen" />
+</p>
 
 ---
 
