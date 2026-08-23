@@ -37,11 +37,28 @@ Uygulama içinde "Harita & Rota" butonu ile erişilebilen yerleşik harita modü
    - Harita üzerinde herhangi bir yere **uzun basarak (long press)** hedef pini bırakma.
    - Açılan panelde mesafe ve koordinatları görüntüleyerek **"Navigasyonu Başlat"** seçeneği.
    - Açık kaynaklı OSRM motoru ile anında en hızlı karayolu rotası çizimi.
-   - Ekranın üstünde canlı **Turn Banner (Dönüş Bilgi Kartı)**: Dönüş yönü ikonu (sağ/sol/U dönüşü), sıradaki dönüşe kalan mesafe ve toplam kalan km/süre takibi.
+   - Canlı **Turn Banner (Dönüş Bilgi Kartı)**: Dönüş yönü ikonu (sağ/sol/U dönüşü), sıradaki dönüşe kalan mesafe ve toplam kalan km/süre takibi.
 
-4. **GPS Takip & Harita Kontrolleri**:
+4. **🏎️ Canlı Hız Göstergesi ve Hız Limiti Uyarısı**:
+   - Anlık GPS hızını gösteren dinamik hız göstergesi.
+   - Bulunduğunuz yolun yasal hız sınırını otomatik tespit etme (OSM/Overpass entegrasyonu).
+   - Hız sınırı aşıldığında sürücüyü uyaran dinamik görsel hız ikazı.
+
+5. **🔴 GPX Canlı Rota Kaydedici (Track Recorder)**:
+   - Sürüşünüzü harita üzerinden takip ederken gerçek zamanlı olarak GPX formatında cihazınıza kaydetme.
+
+6. **GPS Takip & Harita Kontrolleri**:
    - Yüzen **`+` / `−`** butonları ile kolay yakınlaştırma/uzaklaştırma.
    - **`◎` (Mevcut Konum)** butonu ile haritayı anında kullanıcının bulunduğu GPS konumuna merkezleme.
+
+---
+
+## ⚡ Sistem ve Gelişmiş Özellikler
+
+- **🔋 Ekran Karartma / Enerji Tasarrufu Modu (Dimming):** Yansıtma açıkken telefonun aşırı ısınmasını engellemek ve pil tüketimini düşürmek amacıyla telefon ekranını minimum parlaklığa çekme / karartma seçeneği.
+- **🎮 Gidon Kumandası Entegrasyonu:** Motosikletin gidon tuşları ile harita, navigasyon ve yansıtma işlevlerini kontrol edebilmek için özel erişilebilirlik servisi (`KoveAccessibilityService`).
+- **🌐 Çoklu Dil Desteği:** 🇹🇷 Türkçe, 🇬🇧 İngilizce, 🇪🇸 İspanyolca, 🇮🇹 İtalyanca ve 🇬🇷 Yunanca arayüz desteği.
+- **🛡️ Gelişmiş Kararlılık & Kaynak Yönetimi:** BLE komut kuyruğu yönetimi, Wakelock zaman aşımı korumaları, döngüsel log boyutu sınırlandırması ve optimize edilmiş TCP soket yönetimi *(Dominik Ladoš'un katkılarıyla)*.
 
 ---
 
@@ -136,9 +153,26 @@ Accessible via the "Map & Route" button on the main screen:
    - Generates fastest driving routes instantly via the open-source OSRM engine.
    - **Live Top Turn Banner**: Displays upcoming turn direction arrows (left/right/uturn), distance to next maneuver, and remaining trip distance/ETA.
 
-4. **GPS Tracking & On-Screen Map Controls**:
+4. **🏎️ Real-Time Speedometer & Speed Limit Alerts**:
+   - Dynamic real-time GPS speed indicator.
+   - Automatic detection of road speed limits using OpenStreetMap / Overpass data.
+   - Visual speeding alert card when exceeding the speed limit.
+
+5. **🔴 Live GPX Track Recorder**:
+   - Record your real-time rides directly into standard GPX files saved on your device.
+
+6. **GPS Tracking & On-Screen Map Controls**:
    - Floating **`+` / `−`** zoom controls.
    - **`◎` (My Location)** button to instantly center and zoom to your physical GPS position.
+
+---
+
+## ⚡ System & Advanced Features
+
+- **🔋 Energy-Saving Screen Dimming:** Automatically dims or turns down phone screen brightness during mirroring to conserve battery and eliminate phone overheating.
+- **🎮 Handlebar Button Integration:** Control map, navigation, and mirroring functions using the motorcycle's handlebar buttons via a dedicated accessibility service (`KoveAccessibilityService`).
+- **🌐 Multi-Language Support:** Full UI localization for 🇹🇷 Turkish, 🇬🇧 English, 🇪🇸 Spanish, 🇮🇹 Italian, and 🇬🇷 Greek.
+- **🛡️ Enhanced Stability & Resource Management:** Robust BLE command queues, wakelock timeout protections, circular log file limits, and hardened TCP socket lifecycle management *(Special thanks to Dominik Ladoš)*.
 
 ---
 
