@@ -359,4 +359,32 @@
     <string name="btn_screen_dim_on">🌑 Pantalla: Atenuada</string>
     <string name="toast_screen_dimmed">🌑 Pantalla atenuada para ahorrar energía. La duplicación continúa.</string>
     <string name="toast_screen_bright">🔆 Brillo de pantalla restaurado.</string>
+
+    <!-- Clima de Ruta -->
+    <string name="toast_route_weather_on">🌤️ Pronóstico del Clima de Ruta Activado</string>
+    <string name="toast_route_weather_off">🌤️ Pronóstico del Clima de Ruta Desactivado</string>
+    <string name="weather_temperature">🌡️ Temperatura: %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Probabilidad de Lluvia: %1$d%% (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Viento: %1$.1f km/h</string>
+    <string name="weather_distance_from_start">📍 Desde el Inicio: %1$.1f km</string>
+
+    <!-- Avisos de Curvas Peligrosas -->
+    <string name="label_curve_warnings_section">🏍️ Avisos de Curvas Peligrosas y Horquillas</string>
+    <string name="label_curve_warnings_title">Marcadores de Curvas y Horquillas</string>
+    <string name="label_curve_warnings_desc">Insignias de curvas con código de colores en el mapa</string>
+    <string name="curve_hairpin">Horquilla / Giro en U</string>
+    <string name="curve_sharp_left">Curva Cerrada a la Izquierda</string>
+    <string name="curve_sharp_right">Curva Cerrada a la Derecha</string>
+    <string name="curve_medium_left">Curva Media a la Izquierda</string>
+    <string name="curve_medium_right">Curva Media a la Derecha</string>
+    <string name="curve_turn_angle">📐 Ángulo de Giro: %1$d°</string>
+
+    <!-- Modern Ajustes UI -->
+    <string name="label_live_preview">VISTA PREVIA DEL MAPA Y CURSOR EN VIVO</string>
+    <string name="label_driving_features">🛡️ Funciones de Conducción y Seguridad</string>
+    <string name="label_route_weather_title">Pronóstico del Clima de Ruta</string>
+    <string name="label_route_weather_desc">Insignias de temperatura y lluvia a lo largo de la ruta</string>
+    <string name="label_tft_settings_title">📺 Margen de Pantalla TFT Moto</string>
+    <string name="label_tft_settings_desc">Ajuste las barras negras superior e inferior</string>
+    <string name="btn_save_settings">💾 Guardar y Aplicar</string>
 </resources>

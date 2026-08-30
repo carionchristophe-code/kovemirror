@@ -358,4 +358,32 @@
     <string name="btn_screen_dim_on">🌑 Ekran: Karartılmış</string>
     <string name="toast_screen_dimmed">🌑 Ekran enerji tasarrufu için karartıldı. Yansıtma devam ediyor.</string>
     <string name="toast_screen_bright">🔆 Ekran parlaklığı geri yüklendi.</string>
+
+    <!-- Rota Hava Durumu -->
+    <string name="toast_route_weather_on">🌤️ Rota Hava Durumu Açıldı</string>
+    <string name="toast_route_weather_off">🌤️ Rota Hava Durumu Kapatıldı</string>
+    <string name="weather_temperature">🌡️ Sıcaklık: %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Yağış İhtimali: %%%1$d (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Rüzgar: %1$.1f km/s</string>
+    <string name="weather_distance_from_start">📍 Başlangıçtan: %1$.1f km</string>
+
+    <!-- Sert Viraj Uyarıları -->
+    <string name="label_curve_warnings_section">🏍️ Tehlikeli &amp; Sert Viraj Uyarıları</string>
+    <string name="label_curve_warnings_title">Sert Viraj &amp; U-Dönüş İkazları</string>
+    <string name="label_curve_warnings_desc">Harita üzerinde renk kodlu viraj rozetleri</string>
+    <string name="curve_hairpin">U-Viraj</string>
+    <string name="curve_sharp_left">Sert Sol Viraj</string>
+    <string name="curve_sharp_right">Sert Sağ Viraj</string>
+    <string name="curve_medium_left">Orta Sol Viraj</string>
+    <string name="curve_medium_right">Orta Sağ Viraj</string>
+    <string name="curve_turn_angle">📐 Dönüş Açısı: %1$d°</string>
+
+    <!-- Modern Ayarlar UI -->
+    <string name="label_live_preview">CANLI HARİTA &amp; İMLEÇ ÖNİZLEMESİ</string>
+    <string name="label_driving_features">🛡️ Sürüş &amp; Güvenlik Özellikleri</string>
+    <string name="label_route_weather_title">Canlı Rota Hava Durumu</string>
+    <string name="label_route_weather_desc">Güzergah boyunca sıcaklık ve yağış rozetleri</string>
+    <string name="label_tft_settings_title">📺 TFT Kadran Çerçeve Ayarları</string>
+    <string name="label_tft_settings_desc">Üst ve alt siyah bar marjlarını düzenleyin</string>
+    <string name="btn_save_settings">💾 Kaydet &amp; Uygula</string>
 </resources>

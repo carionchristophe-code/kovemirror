@@ -81,14 +81,18 @@ class MirrorService : Service() {
         }
     }
 
-    private var tcpServer:         TcpServer?         = null
-    private var projectionEncoder: ProjectionEncoder? = null
-    private var mediaProjection:   MediaProjection?   = null
-    private var bleManager:        BleManager?        = null
+    private var tcpServer:           TcpServer?           = null
+    private var projectionEncoder:   ProjectionEncoder?   = null
+    private var presentationEncoder: PresentationEncoder? = null
+    private var mediaProjection:     MediaProjection?     = null
+    private var bleManager:          BleManager?          = null
+    private var screenStateManager:  ScreenStateManager?  = null
     private var wifiNetworkCallback: ConnectivityManager.NetworkCallback? = null
     private var tcpServerStarted = false
     private var isControlOnlyMode = false
+    private var isVideoConnected = false
     private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private val modeLock = Any()
 
     // ─── Lifecycle ───────────────────────────────────────────────
 
@@ -166,10 +170,9 @@ class MirrorService : Service() {
             DebugLogger.info("   Heartbeat Port: ${TcpServer.PORT_HEARTBEAT}")
 
             val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            @Suppress("DEPRECATION")
             wakeLock = powerManager.newWakeLock(
-                android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "KoveMirror::AlwaysOn"
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "KoveMirror::PartialWakeLock"
             )
             wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
 
@@ -178,10 +181,33 @@ class MirrorService : Service() {
             mediaProjection = projection
             projection.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
-                    DebugLogger.warning("⚠️ MediaProjection stopped by system")
-                    stopMirroring()
+                    DebugLogger.warning("⚠️ MediaProjection stopped by system (Screen off / Projection revoked)")
+                    mediaProjection = null
+                    synchronized(modeLock) {
+                        projectionEncoder?.stop()
+                        projectionEncoder = null
+                        if (presentationEncoder == null && isVideoConnected) {
+                            DebugLogger.info("🔄 Seamlessly switching to VirtualDisplay Presentation mode...")
+                            Handler(Looper.getMainLooper()).post {
+                                startPresentationPipeline()
+                            }
+                        }
+                    }
                 }
             }, null)
+
+            // Setup ScreenStateManager for auto-switching to VirtualDisplay Map mode on screen off
+            screenStateManager = ScreenStateManager(this).apply {
+                register(object : ScreenStateManager.Listener {
+                    override fun onScreenTurnedOff() {
+                        handleScreenTurnedOff()
+                    }
+
+                    override fun onScreenTurnedOn() {
+                        handleScreenTurnedOn()
+                    }
+                })
+            }
 
             val savedMac = getOrAutoSelectBtMac()
             if (savedMac.isNotEmpty()) {
@@ -199,6 +225,14 @@ class MirrorService : Service() {
                 bleManager?.connect(savedMac)
             } else {
                 DebugLogger.warning(getString(R.string.log_bt_mac_not_selected))
+            }
+
+            synchronized(modeLock) {
+                presentationEncoder?.stop()
+                presentationEncoder = null
+                if (isVideoConnected) {
+                    startProjectionPipeline()
+                }
             }
 
             bindToWifiNetwork()
@@ -219,10 +253,9 @@ class MirrorService : Service() {
             DebugLogger.info("   Video: DISABLED")
 
             val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            @Suppress("DEPRECATION")
             wakeLock = powerManager.newWakeLock(
-                android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "KoveMirror::AlwaysOn"
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "KoveMirror::PartialWakeLock"
             )
             wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
 
@@ -252,6 +285,100 @@ class MirrorService : Service() {
         }
     }
 
+    // ─── Dual-Mode Switching Handlers ────────────────────────────
+ 
+    private fun handleScreenTurnedOff() {
+        if (isControlOnlyMode || !isVideoConnected || tcpServer == null) return
+        DebugLogger.info("📱 Screen turned OFF -> Switching to VirtualDisplay Presentation HUD (Zero-Black-Bar)")
+        Handler(Looper.getMainLooper()).post {
+            synchronized(modeLock) {
+                projectionEncoder?.stop()
+                projectionEncoder = null
+                if (presentationEncoder == null) {
+                    startPresentationPipeline()
+                }
+            }
+        }
+    }
+
+    private fun handleScreenTurnedOn() {
+        if (isControlOnlyMode || !isVideoConnected || tcpServer == null) return
+        if (presentationEncoder != null && mediaProjection != null) {
+            DebugLogger.info("📱 Screen turned ON -> Switching back to MediaProjection Mirror Mode")
+            Handler(Looper.getMainLooper()).post {
+                synchronized(modeLock) {
+                    presentationEncoder?.stop()
+                    presentationEncoder = null
+                    startProjectionPipeline()
+                }
+            }
+        } else if (presentationEncoder != null && mediaProjection == null) {
+            DebugLogger.info("📱 Screen turned ON (MediaProjection was released by OS, keeping VirtualDisplay Presentation active)")
+        }
+    }
+
+    private fun startProjectionPipeline() {
+        val projection = mediaProjection ?: run {
+            DebugLogger.error("❌ startProjectionPipeline: MediaProjection is null")
+            return
+        }
+        try {
+            val density = resources.displayMetrics.density
+            val topPx = (TFT_TOP_PADDING_DP * density).toInt()
+            val bottomPx = (TFT_BOTTOM_PADDING_DP * density).toInt()
+
+            val encoder = ProjectionEncoder(
+                mediaProjection = projection,
+                width  = TFT_WIDTH,
+                height = TFT_HEIGHT,
+                padding = TFT_PADDING,
+                topPaddingPx = topPx,
+                bottomPaddingPx = bottomPx,
+                displayMode = DISPLAY_MODE,
+                phoneAspectRatio = PHONE_ASPECT_RATIO,
+                context = applicationContext
+            )
+            projectionEncoder = encoder
+            if (encoder.init()) {
+                encoder.startEncoding { nalData ->
+                    tcpServer?.writeData(nalData)
+                }
+                updateNotif(getString(R.string.notif_tft_connected))
+                DebugLogger.success("✅ MediaProjection screen encoder active")
+            } else {
+                DebugLogger.error("❌ MediaProjection encoder init failed")
+            }
+        } catch (e: Exception) {
+            DebugLogger.error("❌ startProjectionPipeline error: ${e.message}")
+        }
+    }
+
+    private fun startPresentationPipeline() {
+        try {
+            val encoder = PresentationEncoder(
+                context = applicationContext,
+                width  = TFT_WIDTH,
+                height = TFT_HEIGHT,
+                dpi = 320,
+                fps = 30
+            )
+            presentationEncoder = encoder
+            if (encoder.init()) {
+                encoder.startEncoding { nalData ->
+                    tcpServer?.writeData(nalData)
+                }
+                updateNotif("🏍️ TFT Harita & Navigasyon (Ekran Kapalı)")
+                DebugLogger.success("✅ VirtualDisplay Presentation encoder active (Zero-Black-Bar)")
+            } else {
+                DebugLogger.error("❌ Presentation encoder init failed")
+                presentationEncoder = null
+            }
+        } catch (e: Exception) {
+            DebugLogger.error("❌ startPresentationPipeline error: ${e.message}")
+            presentationEncoder = null
+        }
+    }
+
     private fun startTcpServer() {
         if (!isControlOnlyMode) {
             val projection = mediaProjection
@@ -278,34 +405,19 @@ class MirrorService : Service() {
             onConnected = { os ->
                 if (!isControlOnlyMode) {
                     DebugLogger.success(getString(R.string.log_tft_video_connected))
-                    try {
-                        val density = resources.displayMetrics.density
-                        val topPx = (TFT_TOP_PADDING_DP * density).toInt()
-                        val bottomPx = (TFT_BOTTOM_PADDING_DP * density).toInt()
+                    isVideoConnected = true
 
-                        val encoder = ProjectionEncoder(
-                            mediaProjection = mediaProjection!!,
-                            width  = TFT_WIDTH,
-                            height = TFT_HEIGHT,
-                            padding = TFT_PADDING,
-                            topPaddingPx = topPx,
-                            bottomPaddingPx = bottomPx,
-                            displayMode = DISPLAY_MODE,
-                            phoneAspectRatio = PHONE_ASPECT_RATIO,
-                            context = applicationContext
-                        )
-                        projectionEncoder = encoder
-                        if (encoder.init()) {
-                            encoder.startEncoding { nalData ->
-                                tcpServer?.writeData(nalData)
-                            }
+                    val isInteractive = screenStateManager?.isScreenInteractive() ?: true
+                    val isMapActive = MapStateHolder.isMapOpen || MapStateHolder.isNavigating ||
+                            MapStateHolder.activeNavigationRoute != null || MapStateHolder.loadedRoutes.isNotEmpty()
+
+                    synchronized(modeLock) {
+                        if (!isInteractive && isMapActive) {
+                            startPresentationPipeline()
                         } else {
-                            DebugLogger.error("❌ Encoder could not be started")
+                            startProjectionPipeline()
                         }
-                    } catch (e: Exception) {
-                        DebugLogger.error("❌ Encoder start error: ${e.message}")
                     }
-                    updateNotif(getString(R.string.notif_tft_connected))
                 } else {
                     DebugLogger.success("🎮 TFT Control connected (Control Only mode)")
                     updateNotif(getString(R.string.notif_control_only_active))
@@ -314,8 +426,13 @@ class MirrorService : Service() {
             onDisconnected = {
                 DebugLogger.warning(getString(R.string.log_tft_disconnected_waiting))
                 if (!isControlOnlyMode) {
-                    projectionEncoder?.stop()
-                    projectionEncoder = null
+                    isVideoConnected = false
+                    synchronized(modeLock) {
+                        projectionEncoder?.stop()
+                        projectionEncoder = null
+                        presentationEncoder?.stop()
+                        presentationEncoder = null
+                    }
                     updateNotif(getString(R.string.notif_waiting_tft_port, TcpServer.PORT_VIDEO))
                 }
 
@@ -345,11 +462,18 @@ class MirrorService : Service() {
 
     private fun stopMirroring() {
         DebugLogger.info(getString(R.string.log_stopping_mirroring))
+        screenStateManager?.unregister()
+        screenStateManager = null
         bleManager?.disconnect()
         bleManager = null
         unbindFromWifiNetwork()
-        projectionEncoder?.stop()
-        projectionEncoder = null
+        isVideoConnected = false
+        synchronized(modeLock) {
+            projectionEncoder?.stop()
+            projectionEncoder = null
+            presentationEncoder?.stop()
+            presentationEncoder = null
+        }
         tcpServer?.stop()
         tcpServer = null
         tcpServerStarted = false

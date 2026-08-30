@@ -360,4 +360,32 @@
     <string name="btn_screen_dim_on">🌑 Schermo: Oscurato</string>
     <string name="toast_screen_dimmed">🌑 Schermo oscurato per risparmiare energia. Il mirroring continua.</string>
     <string name="toast_screen_bright">🔆 Luminosità schermo ripristinata.</string>
+
+    <!-- Meteo Percorso -->
+    <string name="toast_route_weather_on">🌤️ Previsioni Meteo Percorso Attive</string>
+    <string name="toast_route_weather_off">🌤️ Previsioni Meteo Percorso Disattivate</string>
+    <string name="weather_temperature">🌡️ Temperatura: %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Probabilità Pioggia: %1$d%% (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Vento: %1$.1f km/h</string>
+    <string name="weather_distance_from_start">📍 Dalla Partenza: %1$.1f km</string>
+
+    <!-- Avvisi Curve Pericolose -->
+    <string name="label_curve_warnings_section">🏍️ Avvisi Curve Pericolose e Tornanti</string>
+    <string name="label_curve_warnings_title">Indicatori Curve e Tornanti</string>
+    <string name="label_curve_warnings_desc">Badge colorati per le curve direttamente sulla mappa</string>
+    <string name="curve_hairpin">Tornante / U-Turn</string>
+    <string name="curve_sharp_left">Curva Stretta a Sinistra</string>
+    <string name="curve_sharp_right">Curva Stretta a Destra</string>
+    <string name="curve_medium_left">Curva Media a Sinistra</string>
+    <string name="curve_medium_right">Curva Media a Destra</string>
+    <string name="curve_turn_angle">📐 Angolo di Svolta: %1$d°</string>
+
+    <!-- Modern Impostazioni UI -->
+    <string name="label_live_preview">ANTEPRIMA MAPPA E CURSORE IN TEMPO REALE</string>
+    <string name="label_driving_features">🛡️ Funzioni di Guida e Sicurezza</string>
+    <string name="label_route_weather_title">Meteo Lungo il Percorso</string>
+    <string name="label_route_weather_desc">Badge di temperatura e pioggia sul tracciato</string>
+    <string name="label_tft_settings_title">📺 Bordo Display TFT Moto</string>
+    <string name="label_tft_settings_desc">Regola i margini neri superiore e inferiore</string>
+    <string name="btn_save_settings">💾 Salva e Applica</string>
 </resources>

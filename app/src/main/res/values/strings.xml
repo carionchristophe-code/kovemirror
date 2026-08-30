@@ -359,4 +359,32 @@
     <string name="btn_screen_dim_on">🌑 Screen: Dimmed</string>
     <string name="toast_screen_dimmed">🌑 Screen dimmed to save energy. Mirroring continues.</string>
     <string name="toast_screen_bright">🔆 Screen brightness restored.</string>
+
+    <!-- Route Weather -->
+    <string name="toast_route_weather_on">🌤️ Route Weather Forecast On</string>
+    <string name="toast_route_weather_off">🌤️ Route Weather Forecast Off</string>
+    <string name="weather_temperature">🌡️ Temperature: %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Rain Probability: %1$d%% (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Wind: %1$.1f km/h</string>
+    <string name="weather_distance_from_start">📍 From Start: %1$.1f km</string>
+
+    <!-- Sharp Curve Warnings -->
+    <string name="label_curve_warnings_section">🏍️ Sharp Curve &amp; Hairpin Warnings</string>
+    <string name="label_curve_warnings_title">Sharp Curve &amp; Hairpin Markers</string>
+    <string name="label_curve_warnings_desc">Color-coded curve badges directly on the map</string>
+    <string name="curve_hairpin">U-Turn / Hairpin</string>
+    <string name="curve_sharp_left">Sharp Left Turn</string>
+    <string name="curve_sharp_right">Sharp Right Turn</string>
+    <string name="curve_medium_left">Medium Left Curve</string>
+    <string name="curve_medium_right">Medium Right Curve</string>
+    <string name="curve_turn_angle">📐 Turn Angle: %1$d°</string>
+
+    <!-- Modern Settings UI -->
+    <string name="label_live_preview">LIVE MAP &amp; CURSOR PREVIEW</string>
+    <string name="label_driving_features">🛡️ Riding &amp; Safety Features</string>
+    <string name="label_route_weather_title">Route Weather Forecast</string>
+    <string name="label_route_weather_desc">Temperature &amp; precipitation badges along the route</string>
+    <string name="label_tft_settings_title">📺 TFT Display Padding</string>
+    <string name="label_tft_settings_desc">Adjust top &amp; bottom black bar margins for motorcycle TFT</string>
+    <string name="btn_save_settings">💾 Save &amp; Apply</string>
 </resources>

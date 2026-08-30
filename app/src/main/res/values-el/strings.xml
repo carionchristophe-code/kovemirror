@@ -359,4 +359,32 @@
     <string name="btn_screen_dim_on">🌑 Οθόνη: Γειωμένη</string>
     <string name="toast_screen_dimmed">🌑 Η οθόνη γειώθηκε για εξοικονόμηση ενέργειας. Η αντικατοπτρισμός συνεχίζει.</string>
     <string name="toast_screen_bright">🔆 Η φωτεινότητα οθόνης αποκαταστάθηκε.</string>
+
+    <!-- Καιρός Διαδρομής -->
+    <string name="toast_route_weather_on">🌤️ Πρόγνωση Καιρού Διαδρομής Ενεργή</string>
+    <string name="toast_route_weather_off">🌤️ Πρόγνωση Καιρού Διαδρομής Ανενεργή</string>
+    <string name="weather_temperature">🌡️ Θερμοκρασία: %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Πιθανότητα Βροχής: %1$d%% (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Άνεμος: %1$.1f km/h</string>
+    <string name="weather_distance_from_start">📍 Από την Αφετηρία: %1$.1f km</string>
+
+    <!-- Προειδοποιήσεις Επικίνδυνων Στροφών -->
+    <string name="label_curve_warnings_section">🏍️ Προειδοποιήσεις Επικίνδυνων Στροφών</string>
+    <string name="label_curve_warnings_title">Δείκτες Κλειστών Στροφών</string>
+    <string name="label_curve_warnings_desc">Χρωματικοί δείκτες στροφών πάνω στο χάρτη</string>
+    <string name="curve_hairpin">Κλειστή Στροφή (Φουρκέτα)</string>
+    <string name="curve_sharp_left">Απότομη Αριστερή Στροφή</string>
+    <string name="curve_sharp_right">Απότομη Δεξιά Στροφή</string>
+    <string name="curve_medium_left">Μέτρια Αριστερή Στροφή</string>
+    <string name="curve_medium_right">Μέτρια Δεξιά Στροφή</string>
+    <string name="curve_turn_angle">📐 Γωνία Στροφής: %1$d°</string>
+
+    <!-- Modern Ρυθμίσεις UI -->
+    <string name="label_live_preview">ΖΩΝΤΑΝΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΧΑΡΤΗ &amp; ΔΡΟΜΕΑ</string>
+    <string name="label_driving_features">🛡️ Λειτουργίες Οδήγησης &amp; Ασφάλειας</string>
+    <string name="label_route_weather_title">Καιρός Διαδρομής</string>
+    <string name="label_route_weather_desc">Δείκτες θερμοκρασίας και βροχής στη διαδρομή</string>
+    <string name="label_tft_settings_title">📺 Περιθώρια Οθόνης TFT Μοτοσυκλέτας</string>
+    <string name="label_tft_settings_desc">Ρυθμίστε τα μαύρα περιθώρια πάνω και κάτω</string>
+    <string name="btn_save_settings">💾 Αποθήκευση &amp; Εφαρμογή</string>
 </resources>

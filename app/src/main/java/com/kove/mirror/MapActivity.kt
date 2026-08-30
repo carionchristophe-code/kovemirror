@@ -114,6 +114,16 @@ class MapActivity : AppCompatActivity() {
     private var initialTotalDurationSeconds: Double = 0.0
     private var lastKnownSegmentIndex: Int = 0
 
+    // ─── Route Weather Forecast ──────────────────────────────────
+    private val weatherMarkers2d = mutableListOf<Marker>()
+    private var showRouteWeather: Boolean = false
+    private var lastWeatherFetchMs: Long = 0L
+
+    // ─── Sharp Curve & Hairpin Warnings ──────────────────────────
+    private var showCurveWarnings: Boolean = true
+    private val curveMarkers2d = mutableListOf<Marker>()
+    private var detectedCurvesList = listOf<CurveWarningHelper.CurvePoint>()
+
     // ─── GPX Track Recording ─────────────────────────────────────
     private var isRecordingTrack = false
     private val recordedTrackPoints = mutableListOf<TrackPoint>()
@@ -333,8 +343,22 @@ class MapActivity : AppCompatActivity() {
         mapView.post { update2dCameraPadding() }
 
         mapView.addMapListener(object : org.osmdroid.events.MapListener {
-            override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean = false
+            override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
+                val center = mapView.mapCenter
+                MapStateHolder.updateCamera(
+                    GeoPoint(center.latitude, center.longitude),
+                    mapView.zoomLevelDouble,
+                    mapView.mapOrientation
+                )
+                return false
+            }
             override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
+                val center = mapView.mapCenter
+                MapStateHolder.updateCamera(
+                    GeoPoint(center.latitude, center.longitude),
+                    mapView.zoomLevelDouble,
+                    mapView.mapOrientation
+                )
                 update2dPolylineWidths()
                 return false
             }
@@ -398,6 +422,16 @@ class MapActivity : AppCompatActivity() {
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
                     follow3d = false
                 }
+            }
+
+            map.addOnCameraMoveListener {
+                val cam = map.cameraPosition ?: return@addOnCameraMoveListener
+                val target = cam.target ?: return@addOnCameraMoveListener
+                MapStateHolder.updateCamera(
+                    GeoPoint(target.latitude, target.longitude),
+                    cam.zoom,
+                    cam.bearing.toFloat()
+                )
             }
 
 // Cap the pitch by zoom: below a threshold the tilted camera shows mostly
@@ -793,6 +827,11 @@ class MapActivity : AppCompatActivity() {
                     initialTotalDurationSeconds = route.totalDurationSeconds
                     isNavigating = true
 
+                    MapStateHolder.isNavigating = true
+                    MapStateHolder.activeNavigationRoute = route
+                    MapStateHolder.selectedDestination = dest
+                    MapStateHolder.notifyNavigationChanged()
+
                     map3d?.setNavigationRoute(
                         route.geometryPoints.map { LatLng(it.latitude, it.longitude) }
                     )
@@ -824,6 +863,13 @@ class MapActivity : AppCompatActivity() {
                     }
 
                     updateNavigationUi(myLoc)
+                    updateWeatherButtonVisibility()
+                    if (showRouteWeather) {
+                        refreshRouteWeatherForecast(force = true)
+                    }
+                    if (showCurveWarnings) {
+                        refreshCurveWarnings()
+                    }
                 }
             },
             onError = { error ->
@@ -841,6 +887,11 @@ class MapActivity : AppCompatActivity() {
         currentNavigationRoute = null
         selectedDestination = null
 
+        MapStateHolder.isNavigating = false
+        MapStateHolder.activeNavigationRoute = null
+        MapStateHolder.selectedDestination = null
+        MapStateHolder.notifyNavigationChanged()
+
         map3d?.setNavigationRoute(null)
         map3d?.setDestination(null)
 
@@ -856,6 +907,19 @@ class MapActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnTollToggle)?.visibility = View.GONE
 
         mapView.invalidate()
+        updateWeatherButtonVisibility()
+
+        if (loadedRoutes.isEmpty()) {
+            clearRouteWeatherMarkers()
+            clearCurveMarkers()
+        } else {
+            if (showRouteWeather) {
+                refreshRouteWeatherForecast(force = true)
+            }
+            if (showCurveWarnings) {
+                refreshCurveWarnings()
+            }
+        }
     }
 
     private fun updateNavigationUi(currentLocation: GeoPoint) {
@@ -1218,6 +1282,207 @@ class MapActivity : AppCompatActivity() {
         }
 
         setupTollButtonListener()
+        setupWeatherButtonListener()
+    }
+
+    private fun updateWeatherButtonState(enabled: Boolean) {
+        val btn = findViewById<Button>(R.id.btnWeatherToggle) ?: return
+        if (enabled) {
+            btn.setBackgroundColor(Color.parseColor("#0284C7")) // Sky Blue
+            btn.alpha = 1.0f
+        } else {
+            btn.setBackgroundColor(Color.parseColor("#CC333333")) // Grey
+            btn.alpha = 0.6f
+        }
+    }
+
+    private fun updateWeatherButtonVisibility() {
+        val hasRouteOrNav = isNavigating || loadedRoutes.isNotEmpty()
+        findViewById<Button>(R.id.btnWeatherToggle)?.visibility = if (hasRouteOrNav) View.VISIBLE else View.GONE
+    }
+
+    private fun setupWeatherButtonListener() {
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        showRouteWeather = prefs.getBoolean("show_route_weather", true)
+        updateWeatherButtonState(showRouteWeather)
+        updateWeatherButtonVisibility()
+
+        findViewById<Button>(R.id.btnWeatherToggle)?.setOnClickListener {
+            showRouteWeather = !showRouteWeather
+            prefs.edit().putBoolean("show_route_weather", showRouteWeather).apply()
+            updateWeatherButtonState(showRouteWeather)
+
+            if (showRouteWeather) {
+                Toast.makeText(this, getString(R.string.toast_route_weather_on), Toast.LENGTH_SHORT).show()
+                refreshRouteWeatherForecast(force = true)
+            } else {
+                Toast.makeText(this, getString(R.string.toast_route_weather_off), Toast.LENGTH_SHORT).show()
+                clearRouteWeatherMarkers()
+            }
+        }
+    }
+
+    private fun refreshRouteWeatherForecast(force: Boolean = false) {
+        if (!showRouteWeather) return
+
+        val now = System.currentTimeMillis()
+        if (!force && now - lastWeatherFetchMs < 60_000L) {
+            return
+        }
+
+        val points = when {
+            isNavigating && currentNavigationRoute != null -> currentNavigationRoute?.geometryPoints
+            loadedRoutes.isNotEmpty() -> loadedRoutes.firstOrNull { it.visible }?.points
+            else -> null
+        }
+
+        if (points.isNullOrEmpty() || points.size < 2) {
+            clearRouteWeatherMarkers()
+            return
+        }
+
+        val sampleCheckpoints = RouteWeatherHelper.sampleRoutePoints(points)
+        if (sampleCheckpoints.isEmpty()) return
+
+        lastWeatherFetchMs = now
+        RouteWeatherHelper.fetchRouteWeather(sampleCheckpoints) { weatherPoints ->
+            runOnUiThread {
+                renderRouteWeatherMarkers(weatherPoints)
+            }
+        }
+    }
+
+    private fun renderRouteWeatherMarkers(weatherPoints: List<RouteWeatherHelper.RouteWeatherPoint>) {
+        clearRouteWeatherMarkers()
+        if (!showRouteWeather || weatherPoints.isEmpty()) return
+
+        for (w in weatherPoints) {
+            val badgeBitmap = RouteWeatherHelper.createWeatherBadgeBitmap(this, w)
+            val marker = Marker(mapView).apply {
+                position = w.point
+                icon = android.graphics.drawable.BitmapDrawable(resources, badgeBitmap)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                title = "${w.weatherEmoji} ${w.weatherDescription}"
+                snippet = "${w.temperature.toInt()}°C | Yağış: %${w.precipitationProbability} (${w.precipitationMm} mm) | Rüzgar: ${w.windSpeedKmH.toInt()} km/s"
+                setOnMarkerClickListener { _, _ ->
+                    val msg = "${w.weatherEmoji} ${w.weatherDescription}\n" +
+                            "${getString(R.string.weather_temperature, w.temperature)}\n" +
+                            "${getString(R.string.weather_precipitation_prob, w.precipitationProbability, w.precipitationMm)}\n" +
+                            "${getString(R.string.weather_wind, w.windSpeedKmH)}\n" +
+                            getString(R.string.weather_distance_from_start, w.distanceFromStartKm)
+                    Toast.makeText(this@MapActivity, msg, Toast.LENGTH_LONG).show()
+                    true
+                }
+            }
+            mapView.overlays.add(marker)
+            weatherMarkers2d.add(marker)
+        }
+        mapView.invalidate()
+
+        // 3D Map updates
+        val weather3d = weatherPoints.map {
+            Map3dOverlays.WeatherData(
+                org.maplibre.android.geometry.LatLng(it.point.latitude, it.point.longitude),
+                RouteWeatherHelper.createWeatherBadgeBitmap(this, it)
+            )
+        }
+        map3d?.setWeatherPoints(weather3d)
+
+        // Sync to MapStateHolder / Presentation
+        MapStateHolder.updateWeatherPoints(weatherPoints)
+    }
+
+    private fun clearRouteWeatherMarkers() {
+        for (m in weatherMarkers2d) {
+            mapView.overlays.remove(m)
+        }
+        weatherMarkers2d.clear()
+        map3d?.setWeatherPoints(emptyList())
+        MapStateHolder.updateWeatherPoints(emptyList())
+        mapView.invalidate()
+    }
+
+    // ─── Dangerous & Sharp Curve Warning System ──────────────────
+
+    private fun refreshCurveWarnings() {
+        val prefs = getSharedPreferences("kove_map_prefs", MODE_PRIVATE)
+        showCurveWarnings = prefs.getBoolean("show_curve_warnings", true)
+        if (!showCurveWarnings) {
+            clearCurveMarkers()
+            return
+        }
+
+        val points = when {
+            isNavigating && currentNavigationRoute != null -> currentNavigationRoute?.geometryPoints
+            loadedRoutes.isNotEmpty() -> loadedRoutes.firstOrNull { it.visible }?.points
+            else -> null
+        }
+
+        if (points.isNullOrEmpty() || points.size < 4) {
+            clearCurveMarkers()
+            return
+        }
+
+        detectedCurvesList = CurveWarningHelper.detectCurves(points)
+        renderCurveMarkers(detectedCurvesList)
+    }
+
+    private fun renderCurveMarkers(curves: List<CurveWarningHelper.CurvePoint>) {
+        for (m in curveMarkers2d) {
+            mapView.overlays.remove(m)
+        }
+        curveMarkers2d.clear()
+
+        if (!showCurveWarnings || curves.isEmpty()) {
+            map3d?.setCurvePoints(emptyList())
+            MapStateHolder.updateCurves(emptyList())
+            mapView.invalidate()
+            return
+        }
+
+        for (c in curves) {
+            val badgeBitmap = CurveWarningHelper.createCurveBadgeBitmap(this, c)
+            val localizedDesc = CurveWarningHelper.getLocalizedDescription(this, c)
+            val marker = Marker(mapView).apply {
+                position = c.point
+                icon = android.graphics.drawable.BitmapDrawable(resources, badgeBitmap)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                title = localizedDesc
+                setOnMarkerClickListener { _, _ ->
+                    val msg = "⚠️ $localizedDesc\n" +
+                            "${getString(R.string.curve_turn_angle, c.turnAngleDeg.toInt())}\n" +
+                            getString(R.string.weather_distance_from_start, c.distanceFromStartMeters / 1000.0)
+                    Toast.makeText(this@MapActivity, msg, Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            mapView.overlays.add(marker)
+            curveMarkers2d.add(marker)
+        }
+        mapView.invalidate()
+
+        // 3D Map updates
+        val curves3d = curves.map {
+            Map3dOverlays.CurveData(
+                org.maplibre.android.geometry.LatLng(it.point.latitude, it.point.longitude),
+                CurveWarningHelper.createCurveBadgeBitmap(this, it)
+            )
+        }
+        map3d?.setCurvePoints(curves3d)
+
+        // Sync to MapStateHolder / Presentation
+        MapStateHolder.updateCurves(curves)
+    }
+
+    private fun clearCurveMarkers() {
+        for (m in curveMarkers2d) {
+            mapView.overlays.remove(m)
+        }
+        curveMarkers2d.clear()
+        detectedCurvesList = emptyList()
+        map3d?.setCurvePoints(emptyList())
+        MapStateHolder.updateCurves(emptyList())
+        mapView.invalidate()
     }
 
     private fun updateTollButtonState(avoidTolls: Boolean) {
@@ -1378,6 +1643,8 @@ class MapActivity : AppCompatActivity() {
     private fun switchLayer(layer: Int) {
         val prevLayer = currentLayer
         currentLayer = layer
+        MapStateHolder.currentLayer = layer
+        MapStateHolder.notifyLayerChanged()
         if (layer == LAYER_MAPS || layer == LAYER_TOPO || layer == LAYER_SATELLITE ||
             layer == LAYER_GOOGLE_MAPS || layer == LAYER_GOOGLE_SAT || layer == LAYER_GOOGLE_HYBRID ||
             layer == LAYER_OFFLINE
@@ -1831,6 +2098,13 @@ class MapActivity : AppCompatActivity() {
                         val speedKmH = (location.speed * 3.6f).toInt().coerceAtLeast(0)
                         val altText = if (location.hasAltitude()) "${location.altitude.toInt()} m" else "--- m"
 
+                        MapStateHolder.updateLocation(
+                            GeoPoint(location.latitude, location.longitude),
+                            if (location.hasBearing()) location.bearing else 0f,
+                            speedKmH,
+                            if (location.hasAltitude()) location.altitude else 0.0
+                        )
+
                         SpeedLimitHelper.getSpeedLimit(location.latitude, location.longitude) { speedLimit ->
                             val signLayout = findViewById<View>(R.id.layoutSpeedLimitSign)
                             val tvLimit = findViewById<TextView>(R.id.tvSpeedLimit)
@@ -1862,9 +2136,11 @@ class MapActivity : AppCompatActivity() {
                             findViewById<TextView>(R.id.tvGpsSpeed)?.text = "$speedKmH"
                             findViewById<TextView>(R.id.tvGpsAltitude)?.text = altText
                         }
+                        val myGeo = GeoPoint(location.latitude, location.longitude)
+
                         if (isNavigating) {
                             runOnUiThread {
-                                updateNavigationUi(GeoPoint(location.latitude, location.longitude))
+                                updateNavigationUi(myGeo)
                             }
                         }
                         if (currentLayer == LAYER_3D) {
@@ -2093,6 +2369,7 @@ class MapActivity : AppCompatActivity() {
         var selectedTheme = prefs.getInt("map_theme_mode", MapThemeHelper.THEME_AUTO)
         var selectedShape = prefs.getInt("map_cursor_shape", LocationCursorHelper.SHAPE_NAV_ARROW)
         var selectedColor = prefs.getInt("map_cursor_color", LocationCursorHelper.COLOR_PRESETS[0])
+        var selectedTrackColor = prefs.getInt("map_recording_color", Color.parseColor("#EF4444"))
 
         val view = layoutInflater.inflate(R.layout.dialog_map_settings, null)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
@@ -2100,51 +2377,104 @@ class MapActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        val rgTheme = view.findViewById<android.widget.RadioGroup>(R.id.rgMapTheme)
-        val spShape = view.findViewById<android.widget.Spinner>(R.id.spCursorShape)
+        // Hero Preview views
         val imgPreview = view.findViewById<ImageView>(R.id.imgCursorPreview)
+        val viewHeroTrack = view.findViewById<View>(R.id.viewHeroDemoTrack)
+        val previewMapBox = view.findViewById<View>(R.id.previewMapBox)
+        val tvPreviewDetails = view.findViewById<TextView>(R.id.tvHeroPreviewDetails)
+
+        // Close & Action buttons
+        val btnClose = view.findViewById<View>(R.id.btnCloseSettings)
         val btnCancel = view.findViewById<Button>(R.id.btnCancelMapSettings)
         val btnSave = view.findViewById<Button>(R.id.btnSaveMapSettings)
 
-        when (selectedTheme) {
-            MapThemeHelper.THEME_DAY -> view.findViewById<android.widget.RadioButton>(R.id.rbThemeDay).isChecked = true
-            MapThemeHelper.THEME_NIGHT -> view.findViewById<android.widget.RadioButton>(R.id.rbThemeNight).isChecked = true
-            else -> view.findViewById<android.widget.RadioButton>(R.id.rbThemeAuto).isChecked = true
-        }
+        // Theme Segmented Buttons
+        val themeButtons = listOf(
+            view.findViewById<Button>(R.id.btnThemeDay) to MapThemeHelper.THEME_DAY,
+            view.findViewById<Button>(R.id.btnThemeNight) to MapThemeHelper.THEME_NIGHT,
+            view.findViewById<Button>(R.id.btnThemeAuto) to MapThemeHelper.THEME_AUTO
+        )
 
-        rgTheme.setOnCheckedChangeListener { _, checkedId ->
-            selectedTheme = when (checkedId) {
-                R.id.rbThemeDay -> MapThemeHelper.THEME_DAY
-                R.id.rbThemeNight -> MapThemeHelper.THEME_NIGHT
-                else -> MapThemeHelper.THEME_AUTO
+        fun updateThemeButtons() {
+            themeButtons.forEach { (btn, theme) ->
+                if (theme == selectedTheme) {
+                    btn.setBackgroundResource(R.drawable.bg_settings_pill_active)
+                    btn.setTextColor(Color.WHITE)
+                } else {
+                    btn.setBackgroundResource(R.drawable.bg_settings_pill_inactive)
+                    btn.setTextColor(Color.parseColor("#94A3B8"))
+                }
             }
         }
-
-        val shapeOptions = listOf(
-            getString(R.string.cursor_shape_arrow),
-            getString(R.string.cursor_shape_motorcycle),
-            getString(R.string.cursor_shape_circle),
-            getString(R.string.cursor_shape_crosshair),
-            getString(R.string.cursor_shape_pin)
-        )
-        val adapter = android.widget.ArrayAdapter(this, R.layout.spinner_item_compact, shapeOptions)
-        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_compact)
-        spShape.adapter = adapter
-        spShape.setSelection(selectedShape.coerceIn(0, shapeOptions.size - 1))
 
         fun updatePreview() {
-            val bmp = LocationCursorHelper.createCursorBitmap(this, selectedShape, selectedColor, 44)
+            val bmp = LocationCursorHelper.createCursorBitmap(this, selectedShape, selectedColor, 52)
             imgPreview.setImageBitmap(bmp)
+            viewHeroTrack.setBackgroundColor(selectedTrackColor)
+
+            val isNightMode = when (selectedTheme) {
+                MapThemeHelper.THEME_DAY -> false
+                MapThemeHelper.THEME_NIGHT -> true
+                else -> {
+                    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                    hour < 6 || hour >= 19
+                }
+            }
+            previewMapBox.setBackgroundColor(if (isNightMode) Color.parseColor("#0F172A") else Color.parseColor("#CBD5E1"))
+
+            val themeName = when (selectedTheme) {
+                MapThemeHelper.THEME_DAY -> getString(R.string.map_theme_day)
+                MapThemeHelper.THEME_NIGHT -> getString(R.string.map_theme_night)
+                else -> getString(R.string.map_theme_auto)
+            }
+            val shapeName = when (selectedShape) {
+                LocationCursorHelper.SHAPE_NAV_ARROW -> getString(R.string.cursor_shape_arrow)
+                LocationCursorHelper.SHAPE_MOTORCYCLE -> getString(R.string.cursor_shape_motorcycle)
+                LocationCursorHelper.SHAPE_CIRCLE_DOT -> getString(R.string.cursor_shape_circle)
+                LocationCursorHelper.SHAPE_CROSSHAIR -> getString(R.string.cursor_shape_crosshair)
+                else -> getString(R.string.cursor_shape_pin)
+            }
+            tvPreviewDetails.text = "$themeName • $shapeName"
         }
 
-        spShape.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, position: Int, id: Long) {
-                selectedShape = position
+        themeButtons.forEach { (btn, theme) ->
+            btn.setOnClickListener {
+                selectedTheme = theme
+                updateThemeButtons()
                 updatePreview()
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
 
+        // Shape Chips
+        val shapeChips = listOf(
+            view.findViewById<LinearLayout>(R.id.chipShapeArrow) to LocationCursorHelper.SHAPE_NAV_ARROW,
+            view.findViewById<LinearLayout>(R.id.chipShapeMotorcycle) to LocationCursorHelper.SHAPE_MOTORCYCLE,
+            view.findViewById<LinearLayout>(R.id.chipShapeCircle) to LocationCursorHelper.SHAPE_CIRCLE_DOT,
+            view.findViewById<LinearLayout>(R.id.chipShapeCrosshair) to LocationCursorHelper.SHAPE_CROSSHAIR,
+            view.findViewById<LinearLayout>(R.id.chipShapePin) to LocationCursorHelper.SHAPE_PIN
+        )
+
+        fun updateShapeChips() {
+            shapeChips.forEach { (chip, shape) ->
+                if (shape == selectedShape) {
+                    chip.setBackgroundResource(R.drawable.bg_settings_chip_active)
+                    (chip.getChildAt(1) as? TextView)?.setTextColor(Color.WHITE)
+                } else {
+                    chip.setBackgroundResource(R.drawable.bg_settings_chip_inactive)
+                    (chip.getChildAt(1) as? TextView)?.setTextColor(Color.parseColor("#94A3B8"))
+                }
+            }
+        }
+
+        shapeChips.forEach { (chip, shape) ->
+            chip.setOnClickListener {
+                selectedShape = shape
+                updateShapeChips()
+                updatePreview()
+            }
+        }
+
+        // Cursor Color Circles
         val colorViews = listOf(
             view.findViewById<View>(R.id.colorCircleBlue) to LocationCursorHelper.COLOR_PRESETS[0],
             view.findViewById<View>(R.id.colorCircleRed) to LocationCursorHelper.COLOR_PRESETS[1],
@@ -2178,8 +2508,7 @@ class MapActivity : AppCompatActivity() {
             }
         }
 
-        var selectedTrackColor = prefs.getInt("map_recording_color", Color.parseColor("#EF4444"))
-
+        // Track Color Circles
         val trackColorViews = listOf(
             view.findViewById<View>(R.id.recColorRed) to Color.parseColor("#EF4444"),
             view.findViewById<View>(R.id.recColorOrange) to Color.parseColor("#F97316"),
@@ -2208,13 +2537,33 @@ class MapActivity : AppCompatActivity() {
             v.setOnClickListener {
                 selectedTrackColor = color
                 updateTrackColorBorders()
+                updatePreview()
             }
         }
 
+        // Driving Features Switches
+        val swCurve = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.swCurveWarnings)
+        val initialCurveVal = prefs.getBoolean("show_curve_warnings", true)
+        swCurve?.isChecked = initialCurveVal
+        view.findViewById<View>(R.id.tileCurveWarnings)?.setOnClickListener {
+            swCurve?.toggle()
+        }
+
+        val swWeather = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.swRouteWeather)
+        val initialWeatherVal = prefs.getBoolean("show_route_weather", true)
+        swWeather?.isChecked = initialWeatherVal
+        view.findViewById<View>(R.id.tileRouteWeather)?.setOnClickListener {
+            swWeather?.toggle()
+        }
+
+        // TFT Padding Button
         view.findViewById<Button>(R.id.btnOpenTftPadding)?.setOnClickListener {
             showTftPaddingDialog()
         }
 
+        // Initialize state
+        updateThemeButtons()
+        updateShapeChips()
         updateColorBorders()
         updateTrackColorBorders()
         updatePreview()
@@ -2224,11 +2573,16 @@ class MapActivity : AppCompatActivity() {
         }
 
         btnSave.setOnClickListener {
+            val newCurveVal = swCurve?.isChecked ?: true
+            val newWeatherVal = swWeather?.isChecked ?: true
+
             prefs.edit().apply {
                 putInt("map_theme_mode", selectedTheme)
                 putInt("map_cursor_shape", selectedShape)
                 putInt("map_cursor_color", selectedColor)
                 putInt("map_recording_color", selectedTrackColor)
+                putBoolean("show_curve_warnings", newCurveVal)
+                putBoolean("show_route_weather", newWeatherVal)
                 apply()
             }
 
@@ -2236,6 +2590,21 @@ class MapActivity : AppCompatActivity() {
             applyMapTheme()
             applyLocationCursorStyle()
             updateRecordedPolylineOnMap()
+
+            showCurveWarnings = newCurveVal
+            if (showCurveWarnings) {
+                refreshCurveWarnings()
+            } else {
+                clearCurveMarkers()
+            }
+
+            showRouteWeather = newWeatherVal
+            updateWeatherButtonState(showRouteWeather)
+            if (showRouteWeather) {
+                refreshRouteWeatherForecast(force = true)
+            } else {
+                clearRouteWeatherMarkers()
+            }
 
             Toast.makeText(this, getString(R.string.toast_tft_fit_saved), Toast.LENGTH_SHORT).show()
             dialog.dismiss()
@@ -2725,6 +3094,28 @@ class MapActivity : AppCompatActivity() {
             )
         }
         RouteStorageManager.saveRoutes(this, dtoList)
+        syncRoutesToStateHolder()
+    }
+
+    private fun syncRoutesToStateHolder() {
+        MapStateHolder.loadedRoutes.clear()
+        for (r in loadedRoutes) {
+            MapStateHolder.loadedRoutes.add(
+                MapStateHolder.SharedRoute(
+                    id = r.id,
+                    name = r.name,
+                    points = r.points,
+                    color = r.color,
+                    width = r.width,
+                    visible = r.visible,
+                    showDirectionArrows = r.showDirectionArrows,
+                    arrowColor = r.arrowColor,
+                    showDistanceMarkers = r.showDistanceMarkers,
+                    distanceIntervalKm = r.distanceIntervalKm
+                )
+            )
+        }
+        MapStateHolder.notifyRoutesChanged()
     }
 
     private fun loadSavedRoutesFromStorage() {
@@ -2815,6 +3206,13 @@ class MapActivity : AppCompatActivity() {
         mapView.invalidate()
         refresh3dRoutes()
         refreshRouteList()
+        syncRoutesToStateHolder()
+        if (showRouteWeather && loadedRoutes.isNotEmpty()) {
+            refreshRouteWeatherForecast()
+        }
+        if (showCurveWarnings && loadedRoutes.isNotEmpty()) {
+            refreshCurveWarnings()
+        }
         val btnRouteList = findViewById<Button>(R.id.btnRouteList)
         btnRouteList.visibility = if (loadedRoutes.isNotEmpty()) View.VISIBLE else View.GONE
     }
@@ -2824,6 +3222,7 @@ class MapActivity : AppCompatActivity() {
         val container = findViewById<LinearLayout>(R.id.routeListItems)
         container.removeAllViews()
 
+        updateWeatherButtonVisibility()
         if (loadedRoutes.isEmpty()) return
 
         val grouped = loadedRoutes.groupBy { it.groupName }
@@ -3031,11 +3430,15 @@ class MapActivity : AppCompatActivity() {
         loadedKmlPlacemarks.clear()
         RouteStorageManager.saveRoutes(this, emptyList())
 
+        clearRouteWeatherMarkers()
+        clearCurveMarkers()
+
         mapView.invalidate()
         refresh3dRoutes()
 
         findViewById<Button>(R.id.btnRouteList).visibility = View.GONE
         findViewById<LinearLayout>(R.id.routeListContainer).visibility = View.GONE
+        updateWeatherButtonVisibility()
         refreshRouteList()
     }
 
@@ -3095,6 +3498,19 @@ class MapActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val center = mapView.mapCenter
+        MapStateHolder.isMapOpen = true
+        MapStateHolder.currentLayer = currentLayer
+        MapStateHolder.currentZoom = mapView.zoomLevelDouble
+        MapStateHolder.currentCenter = GeoPoint(center.latitude, center.longitude)
+        MapStateHolder.currentBearing = mapView.mapOrientation
+        MapStateHolder.notifyCameraChanged()
+        MapStateHolder.notifyLayerChanged()
+        syncRoutesToStateHolder()
+        updateWeatherButtonVisibility()
+        if (showCurveWarnings) {
+            refreshCurveWarnings()
+        }
         mapView.onResume()
         mapView3d.onResume()
         HandlebarKeyManager.addListener(handlebarKeyListener)
@@ -3139,6 +3555,7 @@ class MapActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        MapStateHolder.isMapOpen = false
         locationOverlay?.disableMyLocation()
         locationOverlay?.disableFollowLocation()
         mapView3d.onDestroy()

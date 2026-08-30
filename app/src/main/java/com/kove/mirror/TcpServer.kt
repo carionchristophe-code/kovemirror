@@ -85,6 +85,11 @@ class TcpServer(
         running.set(false)
         connected.set(false)
 
+        // Interrupt server threads
+        videoServerThread?.interrupt()
+        controlServerThread?.interrupt()
+        heartbeatServerThread?.interrupt()
+
         // Interrupt heartbeat threads
         videoHeartbeatThread?.interrupt()
         controlHeartbeatThread?.interrupt()
@@ -93,6 +98,9 @@ class TcpServer(
         videoReaderThread?.interrupt()
         controlReaderThread?.interrupt()
 
+        videoServerThread = null
+        controlServerThread = null
+        heartbeatServerThread = null
         videoHeartbeatThread = null
         controlHeartbeatThread = null
         dedicatedHeartbeatThread = null
@@ -160,7 +168,7 @@ class TcpServer(
 
             DebugLogger.success(R.string.log_video_socket_opened, PORT_VIDEO)
 
-            while (running.get()) {
+            while (running.get() && ss.isBound && !ss.isClosed) {
                 try {
                     ss.soTimeout = ACCEPT_TIMEOUT_MS
                     val socket = ss.accept() ?: continue
@@ -170,10 +178,9 @@ class TcpServer(
                     handleVideoClient(socket)
                 } catch (e: SocketTimeoutException) {
                 } catch (e: IOException) {
-                    if (running.get()) {
-                        DebugLogger.error(R.string.log_video_accept_error, e.message ?: "")
-                        Thread.sleep(1000)
-                    }
+                    if (!running.get() || ss.isClosed) break
+                    DebugLogger.error(R.string.log_video_accept_error, e.message ?: "")
+                    Thread.sleep(1000)
                 }
             }
         } catch (e: IOException) {
@@ -306,7 +313,7 @@ class TcpServer(
             controlServerSocket = ss
             DebugLogger.success(R.string.log_control_socket_opened, PORT_CONTROL)
 
-            while (running.get()) {
+            while (running.get() && ss.isBound && !ss.isClosed) {
                 try {
                     ss.soTimeout = ACCEPT_TIMEOUT_MS
                     val socket = ss.accept() ?: continue
@@ -315,7 +322,8 @@ class TcpServer(
                     handleControlClient(socket)
                 } catch (e: SocketTimeoutException) {
                 } catch (e: IOException) {
-                    if (running.get()) Thread.sleep(1000)
+                    if (!running.get() || ss.isClosed) break
+                    Thread.sleep(1000)
                 }
             }
         } catch (e: IOException) {
@@ -547,7 +555,7 @@ class TcpServer(
             heartbeatServerSocket = ss
             DebugLogger.success(R.string.log_hb_socket_opened, PORT_HEARTBEAT)
 
-            while (running.get()) {
+            while (running.get() && ss.isBound && !ss.isClosed) {
                 try {
                     ss.soTimeout = ACCEPT_TIMEOUT_MS
                     val socket = ss.accept() ?: continue
@@ -560,7 +568,8 @@ class TcpServer(
                     startDedicatedHeartbeat(socket)
                 } catch (e: SocketTimeoutException) {
                 } catch (e: IOException) {
-                    if (running.get()) Thread.sleep(1000)
+                    if (!running.get() || ss.isClosed) break
+                    Thread.sleep(1000)
                 }
             }
         } catch (e: IOException) {

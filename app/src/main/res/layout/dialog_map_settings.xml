@@ -1,287 +1,685 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#1E293B"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="#0F172A">
 
+    <!-- Sticky Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="20dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp"
+        android:background="#1E293B">
+
+        <TextView
+            android:id="@+id/tvSettingsHeaderTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/map_settings_dialog_title"
+            android:textColor="#F8FAFC"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:layout_centerVertical="true" />
+
+        <ImageButton
+            android:id="@+id/btnCloseSettings"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#94A3B8"
+            android:contentDescription="Close" />
+    </RelativeLayout>
+
+    <!-- Scrollable Content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 1. Hero Live Preview Card -->
+            <LinearLayout
+                android:id="@+id/cardLivePreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_live_preview"
+                android:padding="14dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_live_preview"
+                    android:textColor="#38BDF8"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="10dp" />
+
+                <RelativeLayout
+                    android:id="@+id/previewMapBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="90dp"
+                    android:background="#1E293B"
+                    android:gravity="center">
+
+                    <!-- Simulated Route Track -->
+                    <View
+                        android:id="@+id/viewHeroDemoTrack"
+                        android:layout_width="140dp"
+                        android:layout_height="5dp"
+                        android:background="#EF4444"
+                        android:layout_centerInParent="true"
+                        android:rotation="-25" />
+
+                    <!-- Live Cursor Preview -->
+                    <ImageView
+                        android:id="@+id/imgCursorPreview"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_centerInParent="true"
+                        android:contentDescription="Cursor Preview" />
+                </RelativeLayout>
+
+                <TextView
+                    android:id="@+id/tvHeroPreviewDetails"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="☀️ Day • ⬆️ Arrow • 🔵 Blue • 🔴 Track"
+                    android:textColor="#94A3B8"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- 2. Map Theme Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_settings_card"
+                android:padding="14dp"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_map_theme"
+                    android:textColor="#F8FAFC"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Segmented Pill Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:orientation="horizontal"
+                    android:background="#0F172A"
+                    android:padding="3dp">
+
+                    <Button
+                        android:id="@+id/btnThemeDay"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="@string/map_theme_day"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_settings_pill_inactive" />
+
+                    <Button
+                        android:id="@+id/btnThemeNight"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="@string/map_theme_night"
+                        android:textColor="#94A3B8"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_settings_pill_inactive"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp" />
+
+                    <Button
+                        android:id="@+id/btnThemeAuto"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="@string/map_theme_auto"
+                        android:textColor="#94A3B8"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_settings_pill_inactive" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 3. Location Cursor Shape & Color Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_settings_card"
+                android:padding="14dp"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_cursor_shape"
+                    android:textColor="#F8FAFC"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Visual Chips for Shape -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:layout_marginBottom="14dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Chip 0: Arrow -->
+                        <LinearLayout
+                            android:id="@+id/chipShapeArrow"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/bg_settings_chip_active"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⬆️"
+                                android:textSize="20sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Arrow"
+                                android:textColor="#F8FAFC"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Chip 1: Motorcycle -->
+                        <LinearLayout
+                            android:id="@+id/chipShapeMotorcycle"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/bg_settings_chip_inactive"
+                            android:layout_marginStart="8dp"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏍️"
+                                android:textSize="20sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Moto"
+                                android:textColor="#94A3B8"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Chip 2: Circle / Dot -->
+                        <LinearLayout
+                            android:id="@+id/chipShapeCircle"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/bg_settings_chip_inactive"
+                            android:layout_marginStart="8dp"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔵"
+                                android:textSize="20sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Dot"
+                                android:textColor="#94A3B8"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Chip 3: Crosshair / Target -->
+                        <LinearLayout
+                            android:id="@+id/chipShapeCrosshair"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/bg_settings_chip_inactive"
+                            android:layout_marginStart="8dp"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🎯"
+                                android:textSize="20sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Target"
+                                android:textColor="#94A3B8"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Chip 4: Pin -->
+                        <LinearLayout
+                            android:id="@+id/chipShapePin"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="@drawable/bg_settings_chip_inactive"
+                            android:layout_marginStart="8dp"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📍"
+                                android:textSize="20sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pin"
+                                android:textColor="#94A3B8"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- Color Palette -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_cursor_color"
+                    android:textColor="#F8FAFC"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/llColorContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:id="@+id/colorCircleBlue"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#0284C7"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCircleRed"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#EF4444"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCircleGreen"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#10B981"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCircleYellow"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#EAB308"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCirclePurple"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#A855F7"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCircleOrange"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#F97316"
+                        android:layout_marginEnd="8dp" />
+
+                    <View
+                        android:id="@+id/colorCircleWhite"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#FFFFFF" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 4. Track Recording Color Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_settings_card"
+                android:padding="14dp"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_recording_color"
+                    android:textColor="#F8FAFC"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <LinearLayout
+                    android:id="@+id/llTrackColorContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:id="@+id/recColorRed"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#EF4444"
+                        android:layout_marginEnd="10dp" />
+
+                    <View
+                        android:id="@+id/recColorOrange"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#F97316"
+                        android:layout_marginEnd="10dp" />
+
+                    <View
+                        android:id="@+id/recColorCyan"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#06B6D4"
+                        android:layout_marginEnd="10dp" />
+
+                    <View
+                        android:id="@+id/recColorGreen"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#10B981"
+                        android:layout_marginEnd="10dp" />
+
+                    <View
+                        android:id="@+id/recColorMagenta"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#D500F9"
+                        android:layout_marginEnd="10dp" />
+
+                    <View
+                        android:id="@+id/recColorYellow"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="#EAB308" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 5. Riding & Safety Features Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_settings_card"
+                android:padding="14dp"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_driving_features"
+                    android:textColor="#F8FAFC"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Curve Warnings Tile -->
+                <LinearLayout
+                    android:id="@+id/tileCurveWarnings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:text="🏍️"
+                        android:textSize="20sp"
+                        android:gravity="center"
+                        android:layout_marginEnd="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_curve_warnings_title"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_curve_warnings_desc"
+                            android:textColor="#94A3B8"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/swCurveWarnings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#334155"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Route Weather Tile -->
+                <LinearLayout
+                    android:id="@+id/tileRouteWeather"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:text="🌤️"
+                        android:textSize="20sp"
+                        android:gravity="center"
+                        android:layout_marginEnd="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_route_weather_title"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_route_weather_desc"
+                            android:textColor="#94A3B8"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/swRouteWeather"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 6. TFT Margin Settings Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_settings_card"
+                android:padding="14dp"
+                android:layout_marginBottom="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:text="📺"
+                        android:textSize="20sp"
+                        android:gravity="center"
+                        android:layout_marginEnd="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_tft_settings_title"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_tft_settings_desc"
+                            android:textColor="#94A3B8"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnOpenTftPadding"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:text="@string/btn_tft_padding_settings"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:background="#334155"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Sticky Bottom Action Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
-
-        <!-- Title -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/map_settings_dialog_title"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Section 1: Map Theme (Day / Night / Auto) -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_map_theme"
-            android:textColor="#38BDF8"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="6dp" />
-
-        <RadioGroup
-            android:id="@+id/rgMapTheme"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <RadioButton
-                android:id="@+id/rbThemeDay"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/map_theme_day"
-                android:textColor="#F8FAFC"
-                android:textSize="12sp"
-                android:checked="true" />
-
-            <RadioButton
-                android:id="@+id/rbThemeNight"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/map_theme_night"
-                android:textColor="#F8FAFC"
-                android:textSize="12sp" />
-
-            <RadioButton
-                android:id="@+id/rbThemeAuto"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/map_theme_auto"
-                android:textColor="#F8FAFC"
-                android:textSize="12sp" />
-        </RadioGroup>
-
-        <!-- Section 2: Cursor Shape -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_cursor_shape"
-            android:textColor="#38BDF8"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="6dp" />
-
-        <Spinner
-            android:id="@+id/spCursorShape"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_button_secondary"
-            android:popupBackground="#161B22"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Section 3: Cursor Color Selection -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_cursor_color"
-            android:textColor="#38BDF8"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/llColorContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="20dp">
-
-            <View
-                android:id="@+id/colorCircleBlue"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#0284C7"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCircleRed"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#EF4444"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCircleGreen"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#10B981"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCircleYellow"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#EAB308"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCirclePurple"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#A855F7"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCircleOrange"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#F97316"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/colorCircleWhite"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#FFFFFF"
-                android:layout_margin="4dp" />
-        </LinearLayout>
-
-        <!-- Section 4: Track Recording Color -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_recording_color"
-            android:textColor="#38BDF8"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/llTrackColorContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="20dp">
-
-            <View
-                android:id="@+id/recColorRed"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#EF4444"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/recColorOrange"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#F97316"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/recColorCyan"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#06B6D4"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/recColorGreen"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#10B981"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/recColorMagenta"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#D500F9"
-                android:layout_margin="4dp" />
-
-            <View
-                android:id="@+id/recColorYellow"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="#EAB308"
-                android:layout_margin="4dp" />
-        </LinearLayout>
-
-        <!-- Section 5: TFT Screen Frame Fit -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_tft_fit"
-            android:textColor="#38BDF8"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+        android:orientation="horizontal"
+        android:background="#1E293B"
+        android:padding="14dp"
+        android:gravity="center_vertical">
 
         <Button
-            android:id="@+id/btnOpenTftPadding"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:text="@string/btn_open_tft_padding"
+            android:id="@+id/btnCancelMapSettings"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="@string/btn_cancel"
+            android:textColor="#94A3B8"
+            android:textSize="13sp"
+            android:background="#334155"
+            android:layout_marginEnd="10dp" />
+
+        <Button
+            android:id="@+id/btnSaveMapSettings"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1.4"
+            android:text="@string/btn_save_settings"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
-            android:background="#475569"
-            android:layout_marginBottom="20dp" />
-
-        <!-- Preview Circle / Icon -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/label_cursor_preview"
-                android:textColor="#94A3B8"
-                android:textSize="13sp" />
-
-            <ImageView
-                android:id="@+id/imgCursorPreview"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:contentDescription="Cursor Preview" />
-        </LinearLayout>
-
-        <!-- Action Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
-            <Button
-                android:id="@+id/btnCancelMapSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="@string/btn_cancel"
-                android:textColor="#94A3B8"
-                android:background="#1E293B"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btnSaveMapSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="@string/tft_fit_save"
-                android:textColor="#FFFFFF"
-                android:background="#2979FF"
-                android:textStyle="bold" />
-        </LinearLayout>
+            android:textStyle="bold"
+            android:background="#0284C7" />
     </LinearLayout>
-</ScrollView>
+</LinearLayout>

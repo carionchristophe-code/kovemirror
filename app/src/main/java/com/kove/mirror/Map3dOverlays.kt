@@ -54,12 +54,38 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
         val bitmap: Bitmap?
     )
 
+    data class WeatherData(
+        val latLng: LatLng,
+        val bitmap: Bitmap
+    )
+
+    data class CurveData(
+        val latLng: LatLng,
+        val bitmap: Bitmap
+    )
+
     private var pois: List<PoiData> = emptyList()
     private var poisSource: GeoJsonSource? = null
+
+    private var weatherPoints: List<WeatherData> = emptyList()
+    private var weatherSource: GeoJsonSource? = null
+
+    private var curvePoints: List<CurveData> = emptyList()
+    private var curvesSource: GeoJsonSource? = null
 
     fun setPois(poiList: List<PoiData>) {
         pois = poiList
         refreshPois()
+    }
+
+    fun setWeatherPoints(list: List<WeatherData>) {
+        weatherPoints = list
+        refreshWeather()
+    }
+
+    fun setCurvePoints(list: List<CurveData>) {
+        curvePoints = list
+        refreshCurves()
     }
 
     fun onStyleLoaded(style: Style) {
@@ -153,12 +179,40 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
                 )
         )
 
+        // Weather Layer: Added on top of all lines & pins so badges are always readable
+        weatherSource = GeoJsonSource("kove-weather-3d").also { style.addSource(it) }
+        style.addLayer(
+            SymbolLayer("kove-weather-layer", "kove-weather-3d")
+                .withProperties(
+                    PropertyFactory.iconImage(Expression.get("iconId")),
+                    PropertyFactory.iconSize(1f),
+                    PropertyFactory.iconAnchor(Property.ICON_ANCHOR_CENTER),
+                    PropertyFactory.iconAllowOverlap(true),
+                    PropertyFactory.iconIgnorePlacement(true)
+                )
+        )
+
+        // Curve Warning Layer: Added on the highest z-index so badges are always visible
+        curvesSource = GeoJsonSource("kove-curves-3d").also { style.addSource(it) }
+        style.addLayer(
+            SymbolLayer("kove-curves-layer", "kove-curves-3d")
+                .withProperties(
+                    PropertyFactory.iconImage(Expression.get("iconId")),
+                    PropertyFactory.iconSize(1f),
+                    PropertyFactory.iconAnchor(Property.ICON_ANCHOR_CENTER),
+                    PropertyFactory.iconAllowOverlap(true),
+                    PropertyFactory.iconIgnorePlacement(true)
+                )
+        )
+
         refreshRoutes()
         refreshPois()
         refreshNav()
         refreshTrack()
         refreshLocation()
         refreshDestination()
+        refreshWeather()
+        refreshCurves()
     }
 
     fun isReady(): Boolean = style != null
@@ -281,6 +335,38 @@ class Map3dOverlays(private val map: MapLibreMap, private val density: Float) {
             val feature = Feature.fromGeometry(point)
             feature.addStringProperty("iconId", iconId)
             feature.addStringProperty("name", poi.name)
+            features.add(feature)
+        }
+        source.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    private fun refreshWeather() {
+        val source = weatherSource ?: return
+        val currentStyle = style ?: return
+        val features = mutableListOf<Feature>()
+
+        weatherPoints.forEachIndexed { index, w ->
+            val iconId = "kove-weather-icon-$index"
+            currentStyle.addImage(iconId, w.bitmap)
+            val point = Point.fromLngLat(w.latLng.longitude, w.latLng.latitude)
+            val feature = Feature.fromGeometry(point)
+            feature.addStringProperty("iconId", iconId)
+            features.add(feature)
+        }
+        source.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    private fun refreshCurves() {
+        val source = curvesSource ?: return
+        val currentStyle = style ?: return
+        val features = mutableListOf<Feature>()
+
+        curvePoints.forEachIndexed { index, c ->
+            val iconId = "kove-curve-icon-$index"
+            currentStyle.addImage(iconId, c.bitmap)
+            val point = Point.fromLngLat(c.latLng.longitude, c.latLng.latitude)
+            val feature = Feature.fromGeometry(point)
+            feature.addStringProperty("iconId", iconId)
             features.add(feature)
         }
         source.setGeoJson(FeatureCollection.fromFeatures(features))
