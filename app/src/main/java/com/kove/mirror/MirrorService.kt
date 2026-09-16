@@ -6,8 +6,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -17,7 +15,6 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import android.view.Surface
 
 class MirrorService : Service() {
 
@@ -61,7 +58,6 @@ class MirrorService : Service() {
                 selectedTargetApp = intent.getStringExtra(EXTRA_TARGET_APP)
 
                 if (resultCode != 0 && data != null) {
-                    // Sauvegarde du token de capture dans le cache
                     cachedResultCode = resultCode
                     cachedIntentData = data.clone() as Intent
                     startScreenStream(resultCode, data)
@@ -93,7 +89,7 @@ class MirrorService : Service() {
 
     private fun startScreenStream(resultCode: Int, data: Intent) {
         try {
-            stopScreenStream() // Nettoyage préalable si nécessaire
+            stopScreenStream()
 
             mediaProjection = mediaProjectionManager?.getMediaProjection(resultCode, data)
             if (mediaProjection == null) {
@@ -102,23 +98,21 @@ class MirrorService : Service() {
             }
 
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            val flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
             
-            // Création de l'écran virtuel Kove TFT (600x1024)
+            // Correction de l'appel : tous les arguments respectent les types stricts de la signature Android
             virtualDisplay = displayManager.createVirtualDisplay(
                 "KoveTFTDisplay",
                 TFT_WIDTH,
                 TFT_HEIGHT,
                 TFT_DPI,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                 null,
-                null,
-                null
+                flags
             )
 
             isStreamingActive = true
             Log.i(TAG, "Flux vidéo Kove démarré avec succès !")
 
-            // Si une application secondaire a été choisie (ex: DMD2 ou OsmAnd)
             virtualDisplay?.display?.let { display ->
                 launchSecondaryAppIfSelected(display.displayId)
             }
@@ -137,12 +131,12 @@ class MirrorService : Service() {
             Log.i(TAG, "Relance du flux à partir du jeton en cache...")
             startScreenStream(cachedResultCode, cachedIntentData!!)
         } else {
-            Log.w(TAG, "Aucun jeton en cache. Démarrez la projection depuis l'interface au moins une fois.")
+            Log.w(TAG, "Aucun jeton en cache.")
         }
     }
 
     /**
-     * Lance DMD2 / OsmAnd directement et uniquement sur l'écran virtuel Kove TFT
+     * Lance DMD2 / OsmAnd directement sur l'écran virtuel Kove TFT
      */
     private fun launchSecondaryAppIfSelected(displayId: Int) {
         val targetPackage = when (selectedTargetApp) {
