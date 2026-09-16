@@ -20,6 +20,11 @@ class MirrorService : Service() {
 
     companion object {
         private const val TAG = "KoveMirrorService"
+
+        // Instance singleton requise par HandlebarOverlayService
+        var instance: MirrorService? = null
+
+        // Constantes requises par MainActivity et KovePresentation
         const val ACTION_START_STREAM = "com.kove.mirror.ACTION_START_STREAM"
         const val ACTION_STOP_STREAM = "com.kove.mirror.ACTION_STOP_STREAM"
         const val ACTION_RELAUNCH_STREAM = "com.kove.mirror.ACTION_RELAUNCH_STREAM"
@@ -27,6 +32,13 @@ class MirrorService : Service() {
         const val EXTRA_RESULT_CODE = "extra_result_code"
         const val EXTRA_DATA_INTENT = "extra_data_intent"
         const val EXTRA_TARGET_APP = "extra_target_app"
+
+        // Constantes d'affichage d'origine Kove
+        var DISPLAY_MODE: Int = 0
+        var PHONE_ASPECT_RATIO: Float = 1.77f
+        var TFT_PADDING: Boolean = false
+        var TFT_TOP_PADDING_DP: Int = 0
+        var TFT_BOTTOM_PADDING_DP: Int = 0
 
         // Résolution TFT Kove 800 Pro
         const val TFT_WIDTH = 600
@@ -37,7 +49,48 @@ class MirrorService : Service() {
         var cachedResultCode: Int = 0
         var cachedIntentData: Intent? = null
         var isStreamingActive: Boolean = false
+        var isEnabled: Boolean = false
         var selectedTargetApp: String? = null
+
+        // Méthodes statiques d'origine appelées par MainActivity
+        fun startControlOnlyService(context: Context) {
+            val intent = Intent(context, MirrorService::class.java).apply {
+                action = "ACTION_START_CONTROL_ONLY"
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+            isEnabled = true
+        }
+
+        fun startService(context: Context, resultCode: Int, data: Intent) {
+            val intent = Intent(context, MirrorService::class.java).apply {
+                action = ACTION_START_STREAM
+                putExtra(EXTRA_RESULT_CODE, resultCode)
+                putExtra(EXTRA_DATA_INTENT, data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+            isEnabled = true
+        }
+
+        fun stopService(context: Context) {
+            val intent = Intent(context, MirrorService::class.java).apply {
+                action = ACTION_STOP_STREAM
+            }
+            context.stopService(intent)
+            isEnabled = false
+        }
+
+        fun updatePadding(topDp: Int, bottomDp: Int) {
+            TFT_TOP_PADDING_DP = topDp
+            TFT_BOTTOM_PADDING_DP = bottomDp
+        }
     }
 
     private var mediaProjectionManager: MediaProjectionManager? = null
@@ -46,6 +99,7 @@ class MirrorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         startForegroundNotification()
     }
@@ -65,7 +119,7 @@ class MirrorService : Service() {
             }
 
             ACTION_RELAUNCH_STREAM -> {
-                Log.i(TAG, "Demande de relance du flux (One-Touch [ENT] ou reconnexion auto)")
+                Log.i(TAG, "Relance du flux vidéo demandée (Commodo [ENT] ou Watchdog)")
                 relaunchStreamFromCache()
             }
 
@@ -77,7 +131,7 @@ class MirrorService : Service() {
     }
 
     /**
-     * Négociation BLE MTU 512 pour éviter les pertes de trames Wi-Fi sur Kove 800 Pro SV=2.0.4
+     * Négociation BLE MTU 512 (Kove 800 Pro SV=2.0.4)
      */
     fun setupBleMtuNegotiation(gatt: BluetoothGatt) {
         Log.i(TAG, "Connexion BLE détectée : Négociation du MTU 512...")
@@ -98,19 +152,19 @@ class MirrorService : Service() {
             }
 
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-            val flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
-            
-            // Correction de l'appel : tous les arguments respectent les types stricts de la signature Android
+            val displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
+
             virtualDisplay = displayManager.createVirtualDisplay(
                 "KoveTFTDisplay",
                 TFT_WIDTH,
                 TFT_HEIGHT,
                 TFT_DPI,
                 null,
-                flags
+                displayFlags
             )
 
             isStreamingActive = true
+            isEnabled = true
             Log.i(TAG, "Flux vidéo Kove démarré avec succès !")
 
             virtualDisplay?.display?.let { display ->
@@ -123,21 +177,15 @@ class MirrorService : Service() {
         }
     }
 
-    /**
-     * Relance le flux sans redemander la permission Android grâce au cache
-     */
     private fun relaunchStreamFromCache() {
         if (cachedIntentData != null && cachedResultCode != 0) {
-            Log.i(TAG, "Relance du flux à partir du jeton en cache...")
+            Log.i(TAG, "Relance du flux avec le jeton en cache...")
             startScreenStream(cachedResultCode, cachedIntentData!!)
         } else {
-            Log.w(TAG, "Aucun jeton en cache.")
+            Log.w(TAG, "Aucun jeton en cache. Démarrez la projection depuis l'interface au préalable.")
         }
     }
 
-    /**
-     * Lance DMD2 / OsmAnd directement sur l'écran virtuel Kove TFT
-     */
     private fun launchSecondaryAppIfSelected(displayId: Int) {
         val targetPackage = when (selectedTargetApp) {
             "DMD2" -> "com.drivemode.android"
@@ -157,7 +205,7 @@ class MirrorService : Service() {
                     Log.i(TAG, "Application $targetPackage lancée sur l'écran TFT (Display #$displayId)")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Erreur lancement application $targetPackage sur TFT: ${e.message}")
+                Log.e(TAG, "Erreur lors du lancement de l'application sur le TFT: ${e.message}")
             }
         }
     }
@@ -169,6 +217,7 @@ class MirrorService : Service() {
             mediaProjection?.stop()
             mediaProjection = null
             isStreamingActive = false
+            isEnabled = false
             Log.i(TAG, "Flux vidéo arrêté")
         } catch (e: Exception) {
             Log.e(TAG, "Erreur arrêt du flux: ${e.message}")
@@ -207,6 +256,7 @@ class MirrorService : Service() {
 
     override fun onDestroy() {
         stopScreenStream()
+        instance = null
         super.onDestroy()
     }
 
