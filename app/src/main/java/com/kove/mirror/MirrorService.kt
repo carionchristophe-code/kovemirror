@@ -1,624 +1,220 @@
 package com.kove.mirror
 
-import android.app.*
+import android.app.ActivityOptions
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
+import android.util.Log
+import android.view.Surface
 
 class MirrorService : Service() {
 
     companion object {
-        const val ACTION_START              = "com.kove.mirror.START"
-        const val ACTION_START_CONTROL_ONLY = "com.kove.mirror.START_CONTROL_ONLY"
-        const val ACTION_STOP              = "com.kove.mirror.STOP"
-        const val EXTRA_RESULT_CODE  = "result_code"
-        const val EXTRA_RESULT_DATA  = "result_data"
-        const val CHANNEL_ID         = "KoveMirrorCh"
-        const val NOTIF_ID           = 1001
-        const val WAKELOCK_TIMEOUT_MS = 6 * 60 * 60 * 1000L // 6 hours safety timeout
+        private const val TAG = "KoveMirrorService"
+        const val ACTION_START_STREAM = "com.kove.mirror.ACTION_START_STREAM"
+        const val ACTION_STOP_STREAM = "com.kove.mirror.ACTION_STOP_STREAM"
+        const val ACTION_RELAUNCH_STREAM = "com.kove.mirror.ACTION_RELAUNCH_STREAM"
 
-        @Volatile var TFT_WIDTH          = 600
-        @Volatile var TFT_HEIGHT         = 1024
-        @Volatile var TFT_PADDING        = 0
-        @Volatile var TFT_TOP_PADDING_DP    = 0
-        @Volatile var TFT_BOTTOM_PADDING_DP = 0
-        @Volatile var DISPLAY_MODE       = DisplayMode.CENTER_CROP
-        @Volatile var PHONE_ASPECT_RATIO = 0.45f
+        const val EXTRA_RESULT_CODE = "extra_result_code"
+        const val EXTRA_DATA_INTENT = "extra_data_intent"
+        const val EXTRA_TARGET_APP = "extra_target_app"
 
-        @Volatile var runningInstance: MirrorService? = null
+        // Résolution TFT Kove 800 Pro
+        const val TFT_WIDTH = 600
+        const val TFT_HEIGHT = 1024
+        const val TFT_DPI = 160
 
-        fun updatePadding(padding: Int) {
-            updatePadding(padding, padding)
-        }
-
-        fun updatePadding(topDp: Int, bottomDp: Int) {
-            TFT_TOP_PADDING_DP = topDp
-            TFT_BOTTOM_PADDING_DP = bottomDp
-            TFT_PADDING = topDp
-            val density = runningInstance?.resources?.displayMetrics?.density ?: 1f
-            val topPx = (topDp * density).toInt()
-            val bottomPx = (bottomDp * density).toInt()
-            runningInstance?.projectionEncoder?.updatePadding(topPx, bottomPx)
-        }
-
-        fun startService(context: Context, resultCode: Int, data: Intent) {
-            val i = Intent(context, MirrorService::class.java).apply {
-                action = ACTION_START
-                putExtra(EXTRA_RESULT_CODE, resultCode)
-                putExtra(EXTRA_RESULT_DATA, data)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                context.startForegroundService(i)
-            else
-                context.startService(i)
-        }
-
-        fun startControlOnlyService(context: Context) {
-            val i = Intent(context, MirrorService::class.java).apply {
-                action = ACTION_START_CONTROL_ONLY
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                context.startForegroundService(i)
-            else
-                context.startService(i)
-        }
-
-        fun stopService(context: Context) {
-            context.startService(
-                Intent(context, MirrorService::class.java).apply { action = ACTION_STOP }
-            )
-        }
+        // Variables de cache pour reconnexion sans dialogue
+        var cachedResultCode: Int = 0
+        var cachedIntentData: Intent? = null
+        var isStreamingActive: Boolean = false
+        var selectedTargetApp: String? = null
     }
 
-    private var tcpServer:           TcpServer?           = null
-    private var projectionEncoder:   ProjectionEncoder?   = null
-    private var presentationEncoder: PresentationEncoder? = null
-    private var mediaProjection:     MediaProjection?     = null
-    private var bleManager:          BleManager?          = null
-    private var screenStateManager:  ScreenStateManager?  = null
-    private var wifiNetworkCallback: ConnectivityManager.NetworkCallback? = null
-    private var tcpServerStarted = false
-    private var isControlOnlyMode = false
-    private var isVideoConnected = false
-    private var wakeLock: android.os.PowerManager.WakeLock? = null
-    private val modeLock = Any()
-
-    // ─── Lifecycle ───────────────────────────────────────────────
+    private var mediaProjectionManager: MediaProjectionManager? = null
+    private var mediaProjection: MediaProjection? = null
+    private var virtualDisplay: VirtualDisplay? = null
 
     override fun onCreate() {
         super.onCreate()
-        DebugLogger.setContext(this)
-        runningInstance = this
-        createNotificationChannel()
-        HandlebarOverlayService.startService(this)
-        DebugLogger.info("🚀 MirrorService started")
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        startForegroundNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> {
-                isControlOnlyMode = false
-                val code = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
-                val data = if (Build.VERSION.SDK_INT >= 33)
-                    intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
-                else
-                    @Suppress("DEPRECATION") intent.getParcelableExtra(EXTRA_RESULT_DATA)
+            ACTION_START_STREAM -> {
+                val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
+                val data = intent.getParcelableExtra<Intent>(EXTRA_DATA_INTENT)
+                selectedTargetApp = intent.getStringExtra(EXTRA_TARGET_APP)
 
-                if (code != 0 && data != null) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        startForeground(
-                            NOTIF_ID,
-                            buildNotif(getString(R.string.notif_waiting_tft)),
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                        )
-                    } else {
-                        startForeground(NOTIF_ID, buildNotif(getString(R.string.notif_waiting_tft)))
-                    }
-                    startMirroring(code, data)
-                } else {
-                    DebugLogger.error("❌ Invalid MediaProjection data: code=$code, data=$data")
-                    stopSelf()
+                if (resultCode != 0 && data != null) {
+                    // Sauvegarde du token de capture dans le cache
+                    cachedResultCode = resultCode
+                    cachedIntentData = data.clone() as Intent
+                    startScreenStream(resultCode, data)
                 }
             }
-            ACTION_START_CONTROL_ONLY -> {
-                isControlOnlyMode = true
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(
-                        NOTIF_ID,
-                        buildNotif(getString(R.string.notif_control_only_active)),
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-                    )
-                } else {
-                    startForeground(NOTIF_ID, buildNotif(getString(R.string.notif_control_only_active)))
-                }
-                startControlOnly()
+
+            ACTION_RELAUNCH_STREAM -> {
+                Log.i(TAG, "Demande de relance du flux (One-Touch [ENT] ou reconnexion auto)")
+                relaunchStreamFromCache()
             }
-            ACTION_STOP -> {
-                stopMirroring()
-                stopSelf()
+
+            ACTION_STOP_STREAM -> {
+                stopScreenStream()
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    /**
+     * Négociation BLE MTU 512 pour éviter les pertes de trames Wi-Fi sur Kove 800 Pro SV=2.0.4
+     */
+    fun setupBleMtuNegotiation(gatt: BluetoothGatt) {
+        Log.i(TAG, "Connexion BLE détectée : Négociation du MTU 512...")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val success = gatt.requestMtu(512)
+            Log.d(TAG, "Demande MTU 512 envoyée avec succès: $success")
+        }
+    }
+
+    private fun startScreenStream(resultCode: Int, data: Intent) {
+        try {
+            stopScreenStream() // Nettoyage préalable si nécessaire
+
+            mediaProjection = mediaProjectionManager?.getMediaProjection(resultCode, data)
+            if (mediaProjection == null) {
+                Log.e(TAG, "Impossible d'initialiser MediaProjection")
+                return
+            }
+
+            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            
+            // Création de l'écran virtuel Kove TFT (600x1024)
+            virtualDisplay = displayManager.createVirtualDisplay(
+                "KoveTFTDisplay",
+                TFT_WIDTH,
+                TFT_HEIGHT,
+                TFT_DPI,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                null,
+                null,
+                null
+            )
+
+            isStreamingActive = true
+            Log.i(TAG, "Flux vidéo Kove démarré avec succès !")
+
+            // Si une application secondaire a été choisie (ex: DMD2 ou OsmAnd)
+            virtualDisplay?.display?.let { display ->
+                launchSecondaryAppIfSelected(display.displayId)
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur au démarrage du flux vidéo: ${e.message}")
+            isStreamingActive = false
+        }
+    }
+
+    /**
+     * Relance le flux sans redemander la permission Android grâce au cache
+     */
+    private fun relaunchStreamFromCache() {
+        if (cachedIntentData != null && cachedResultCode != 0) {
+            Log.i(TAG, "Relance du flux à partir du jeton en cache...")
+            startScreenStream(cachedResultCode, cachedIntentData!!)
+        } else {
+            Log.w(TAG, "Aucun jeton en cache. Démarrez la projection depuis l'interface au moins une fois.")
+        }
+    }
+
+    /**
+     * Lance DMD2 / OsmAnd directement et uniquement sur l'écran virtuel Kove TFT
+     */
+    private fun launchSecondaryAppIfSelected(displayId: Int) {
+        val targetPackage = when (selectedTargetApp) {
+            "DMD2" -> "com.drivemode.android"
+            "OSMAND" -> "net.osmand.plus"
+            "GMAPS" -> "com.google.android.apps.maps"
+            else -> null
+        }
+
+        if (targetPackage != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val launchIntent = packageManager.getLaunchIntentForPackage(targetPackage)
+                if (launchIntent != null) {
+                    val options = ActivityOptions.makeBasic()
+                    options.launchDisplayId = displayId
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    startActivity(launchIntent, options.toBundle())
+                    Log.i(TAG, "Application $targetPackage lancée sur l'écran TFT (Display #$displayId)")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Erreur lancement application $targetPackage sur TFT: ${e.message}")
+            }
+        }
+    }
+
+    private fun stopScreenStream() {
+        try {
+            virtualDisplay?.release()
+            virtualDisplay = null
+            mediaProjection?.stop()
+            mediaProjection = null
+            isStreamingActive = false
+            Log.i(TAG, "Flux vidéo arrêté")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur arrêt du flux: ${e.message}")
+        }
+    }
+
+    private fun startForegroundNotification() {
+        val channelId = "kove_mirror_stream"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "KoveMirror Streaming",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.createNotificationChannel(channel)
+        }
+
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, channelId)
+                .setContentTitle("KoveMirror Pro 2026")
+                .setContentText("Streaming Kove 800 Pro actif")
+                .setSmallIcon(android.R.drawable.ic_menu_camera)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+                .setContentTitle("KoveMirror Pro 2026")
+                .setContentText("Streaming Kove 800 Pro actif")
+                .setSmallIcon(android.R.drawable.ic_menu_camera)
+                .build()
+        }
+
+        startForeground(101, notification)
+    }
 
     override fun onDestroy() {
-        stopMirroring()
-        runningInstance = null
+        stopScreenStream()
         super.onDestroy()
     }
 
-    // ─── Mirroring logic ─────────────────────────────────────────
-
-    private fun startMirroring(resultCode: Int, data: Intent) {
-        try {
-            DebugLogger.info(getString(R.string.log_mirroring_starting))
-            DebugLogger.info("   Video Port: ${TcpServer.PORT_VIDEO}")
-            DebugLogger.info("   Control Port: ${TcpServer.PORT_CONTROL}")
-            DebugLogger.info("   Heartbeat Port: ${TcpServer.PORT_HEARTBEAT}")
-
-            val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            wakeLock = powerManager.newWakeLock(
-                android.os.PowerManager.PARTIAL_WAKE_LOCK,
-                "KoveMirror::PartialWakeLock"
-            )
-            wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
-
-            val pm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            val projection = pm.getMediaProjection(resultCode, data) ?: throw NullPointerException("MediaProjection is null")
-            mediaProjection = projection
-            projection.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() {
-                    DebugLogger.warning("⚠️ MediaProjection stopped by system (Screen off / Projection revoked)")
-                    mediaProjection = null
-                    synchronized(modeLock) {
-                        projectionEncoder?.stop()
-                        projectionEncoder = null
-                        if (presentationEncoder == null && isVideoConnected) {
-                            DebugLogger.info("🔄 Seamlessly switching to VirtualDisplay Presentation mode...")
-                            Handler(Looper.getMainLooper()).post {
-                                startPresentationPipeline()
-                            }
-                        }
-                    }
-                }
-            }, null)
-
-            // Setup ScreenStateManager for auto-switching to VirtualDisplay Map mode on screen off
-            screenStateManager = ScreenStateManager(this).apply {
-                register(object : ScreenStateManager.Listener {
-                    override fun onScreenTurnedOff() {
-                        handleScreenTurnedOff()
-                    }
-
-                    override fun onScreenTurnedOn() {
-                        handleScreenTurnedOn()
-                    }
-                })
-            }
-
-            val savedMac = getOrAutoSelectBtMac()
-            if (savedMac.isNotEmpty()) {
-                bleManager = BleManager(this) { msg ->
-                    DebugLogger.log(LogLevel.INFO, msg)
-                }
-                bleManager?.onMirrorRequested = {
-                    if (!tcpServerStarted || tcpServer == null) {
-                        DebugLogger.info("🔄 Mirroring requested from TFT, TCP Server restarting...")
-                        Handler(Looper.getMainLooper()).post {
-                            startTcpServer()
-                        }
-                    }
-                }
-                bleManager?.connect(savedMac)
-            } else {
-                DebugLogger.warning(getString(R.string.log_bt_mac_not_selected))
-            }
-
-            synchronized(modeLock) {
-                presentationEncoder?.stop()
-                presentationEncoder = null
-                if (isVideoConnected) {
-                    startProjectionPipeline()
-                }
-            }
-
-            bindToWifiNetwork()
-        } catch (e: Exception) {
-            DebugLogger.error("❌ startMirroring error: ${e.javaClass.simpleName}: ${e.message}")
-            e.printStackTrace()
-            stopSelf()
-        }
-    }
-
-    // ─── Control Only Mode ──────────────────────────────────────
-
-    private fun startControlOnly() {
-        try {
-            DebugLogger.info("🎮 Starting Control Only mode...")
-            DebugLogger.info("   Control Port: ${TcpServer.PORT_CONTROL}")
-            DebugLogger.info("   Heartbeat Port: ${TcpServer.PORT_HEARTBEAT}")
-            DebugLogger.info("   Video: DISABLED")
-
-            val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            wakeLock = powerManager.newWakeLock(
-                android.os.PowerManager.PARTIAL_WAKE_LOCK,
-                "KoveMirror::PartialWakeLock"
-            )
-            wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
-
-            val savedMac = getOrAutoSelectBtMac()
-            if (savedMac.isNotEmpty()) {
-                bleManager = BleManager(this) { msg ->
-                    DebugLogger.log(LogLevel.INFO, msg)
-                }
-                bleManager?.onMirrorRequested = {
-                    if (!tcpServerStarted || tcpServer == null) {
-                        DebugLogger.info("🔄 Control requested from TFT, TCP Server restarting...")
-                        Handler(Looper.getMainLooper()).post {
-                            startTcpServer()
-                        }
-                    }
-                }
-                bleManager?.connect(savedMac)
-            } else {
-                DebugLogger.warning(getString(R.string.log_bt_mac_not_selected))
-            }
-
-            bindToWifiNetwork()
-        } catch (e: Exception) {
-            DebugLogger.error("❌ startControlOnly error: ${e.javaClass.simpleName}: ${e.message}")
-            e.printStackTrace()
-            stopSelf()
-        }
-    }
-
-    // ─── Dual-Mode Switching Handlers ────────────────────────────
- 
-    private fun handleScreenTurnedOff() {
-        if (isControlOnlyMode || !isVideoConnected || tcpServer == null) return
-        DebugLogger.info("📱 Screen turned OFF -> Switching to VirtualDisplay Presentation HUD (Zero-Black-Bar)")
-        Handler(Looper.getMainLooper()).post {
-            synchronized(modeLock) {
-                projectionEncoder?.stop()
-                projectionEncoder = null
-                if (presentationEncoder == null) {
-                    startPresentationPipeline()
-                }
-            }
-        }
-    }
-
-    private fun handleScreenTurnedOn() {
-        if (isControlOnlyMode || !isVideoConnected || tcpServer == null) return
-        if (presentationEncoder != null && mediaProjection != null) {
-            DebugLogger.info("📱 Screen turned ON -> Switching back to MediaProjection Mirror Mode")
-            Handler(Looper.getMainLooper()).post {
-                synchronized(modeLock) {
-                    presentationEncoder?.stop()
-                    presentationEncoder = null
-                    startProjectionPipeline()
-                }
-            }
-        } else if (presentationEncoder != null && mediaProjection == null) {
-            DebugLogger.info("📱 Screen turned ON (MediaProjection was released by OS, keeping VirtualDisplay Presentation active)")
-        }
-    }
-
-    private fun startProjectionPipeline() {
-        val projection = mediaProjection ?: run {
-            DebugLogger.error("❌ startProjectionPipeline: MediaProjection is null")
-            return
-        }
-        try {
-            val density = resources.displayMetrics.density
-            val topPx = (TFT_TOP_PADDING_DP * density).toInt()
-            val bottomPx = (TFT_BOTTOM_PADDING_DP * density).toInt()
-
-            val encoder = ProjectionEncoder(
-                mediaProjection = projection,
-                width  = TFT_WIDTH,
-                height = TFT_HEIGHT,
-                padding = TFT_PADDING,
-                topPaddingPx = topPx,
-                bottomPaddingPx = bottomPx,
-                displayMode = DISPLAY_MODE,
-                phoneAspectRatio = PHONE_ASPECT_RATIO,
-                context = applicationContext
-            )
-            projectionEncoder = encoder
-            if (encoder.init()) {
-                encoder.startEncoding { nalData ->
-                    tcpServer?.writeData(nalData)
-                }
-                updateNotif(getString(R.string.notif_tft_connected))
-                DebugLogger.success("✅ MediaProjection screen encoder active")
-            } else {
-                DebugLogger.error("❌ MediaProjection encoder init failed")
-            }
-        } catch (e: Exception) {
-            DebugLogger.error("❌ startProjectionPipeline error: ${e.message}")
-        }
-    }
-
-    private fun startPresentationPipeline() {
-        try {
-            val encoder = PresentationEncoder(
-                context = applicationContext,
-                width  = TFT_WIDTH,
-                height = TFT_HEIGHT,
-                dpi = 320,
-                fps = 30
-            )
-            presentationEncoder = encoder
-            if (encoder.init()) {
-                encoder.startEncoding { nalData ->
-                    tcpServer?.writeData(nalData)
-                }
-                updateNotif("🏍️ TFT Harita & Navigasyon (Ekran Kapalı)")
-                DebugLogger.success("✅ VirtualDisplay Presentation encoder active (Zero-Black-Bar)")
-            } else {
-                DebugLogger.error("❌ Presentation encoder init failed")
-                presentationEncoder = null
-            }
-        } catch (e: Exception) {
-            DebugLogger.error("❌ startPresentationPipeline error: ${e.message}")
-            presentationEncoder = null
-        }
-    }
-
-    private fun startTcpServer() {
-        if (!isControlOnlyMode) {
-            val projection = mediaProjection
-            if (projection == null) {
-                DebugLogger.warning("⚠️ MediaProjection not ready yet, TCP Server not started")
-                return
-            }
-        }
-
-        if (tcpServerStarted) {
-            DebugLogger.info("🔄 TCP Server already running, restarting...")
-            tcpServer?.stop()
-            tcpServer = null
-        }
-
-        val ipAddress = NetworkUtils.getWifiIpAddress(applicationContext)
-        DebugLogger.info("🔌 TCP Server starting, bind IP: $ipAddress (controlOnly=$isControlOnlyMode)")
-
-        val server = TcpServer(
-            hostIp = ipAddress,
-            width  = TFT_WIDTH,
-            height = TFT_HEIGHT,
-            videoEnabled = !isControlOnlyMode,
-            onConnected = { os ->
-                if (!isControlOnlyMode) {
-                    DebugLogger.success(getString(R.string.log_tft_video_connected))
-                    isVideoConnected = true
-
-                    val isInteractive = screenStateManager?.isScreenInteractive() ?: true
-                    val isMapActive = MapStateHolder.isMapOpen || MapStateHolder.isNavigating ||
-                            MapStateHolder.activeNavigationRoute != null || MapStateHolder.loadedRoutes.isNotEmpty()
-
-                    synchronized(modeLock) {
-                        if (!isInteractive && isMapActive) {
-                            startPresentationPipeline()
-                        } else {
-                            startProjectionPipeline()
-                        }
-                    }
-                } else {
-                    DebugLogger.success("🎮 TFT Control connected (Control Only mode)")
-                    updateNotif(getString(R.string.notif_control_only_active))
-                }
-            },
-            onDisconnected = {
-                DebugLogger.warning(getString(R.string.log_tft_disconnected_waiting))
-                if (!isControlOnlyMode) {
-                    isVideoConnected = false
-                    synchronized(modeLock) {
-                        projectionEncoder?.stop()
-                        projectionEncoder = null
-                        presentationEncoder?.stop()
-                        presentationEncoder = null
-                    }
-                    updateNotif(getString(R.string.notif_waiting_tft_port, TcpServer.PORT_VIDEO))
-                }
-
-                Handler(Looper.getMainLooper()).postDelayed({
-                    if (tcpServerStarted && bleManager != null) {
-                        DebugLogger.info("🔄 Auto-Reconnect triggered...")
-                        bleManager?.sendInitPackets()
-                    }
-                }, 2000)
-            }
-        )
-        tcpServer = server
-        server.start()
-        tcpServerStarted = true
-
-        val gw = NetworkUtils.getGatewayAddress(applicationContext)
-        DebugLogger.info("─────────────────────────────")
-        DebugLogger.info("📡 Phone IP: $ipAddress")
-        DebugLogger.info("🏍️ Gateway (TBox): $gw")
-        if (isControlOnlyMode) {
-            DebugLogger.info("🔌 Ports: Control=${TcpServer.PORT_CONTROL}, Heartbeat=${TcpServer.PORT_HEARTBEAT} (Video DISABLED)")
-        } else {
-            DebugLogger.info("🔌 Ports: Video=${TcpServer.PORT_VIDEO}, Control=${TcpServer.PORT_CONTROL}, Heartbeat=${TcpServer.PORT_HEARTBEAT}")
-        }
-        DebugLogger.info("─────────────────────────────")
-    }
-
-    private fun stopMirroring() {
-        DebugLogger.info(getString(R.string.log_stopping_mirroring))
-        screenStateManager?.unregister()
-        screenStateManager = null
-        bleManager?.disconnect()
-        bleManager = null
-        unbindFromWifiNetwork()
-        isVideoConnected = false
-        synchronized(modeLock) {
-            projectionEncoder?.stop()
-            projectionEncoder = null
-            presentationEncoder?.stop()
-            presentationEncoder = null
-        }
-        tcpServer?.stop()
-        tcpServer = null
-        tcpServerStarted = false
-        mediaProjection?.stop()
-        mediaProjection = null
-
-        if (wakeLock?.isHeld == true) {
-            wakeLock?.release()
-        }
-        wakeLock = null
-
-        DebugLogger.info(getString(R.string.log_all_stopped))
-    }
-
-    private fun bindToWifiNetwork() {
-        try {
-            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val request = NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-
-            val callback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    super.onAvailable(network)
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            connectivityManager.bindProcessToNetwork(network)
-                            DebugLogger.success(getString(R.string.log_wifi_bound_process))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            ConnectivityManager.setProcessDefaultNetwork(network)
-                            DebugLogger.success(getString(R.string.log_wifi_bound_process_legacy))
-                        }
-                        if (!tcpServerStarted || tcpServer == null) {
-                            Handler(Looper.getMainLooper()).post {
-                                startTcpServer()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        DebugLogger.error("❌ Error binding to network: ${e.message}")
-                    }
-                }
-
-                override fun onLost(network: Network) {
-                    super.onLost(network)
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            connectivityManager.bindProcessToNetwork(null)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            ConnectivityManager.setProcessDefaultNetwork(null)
-                        }
-                        DebugLogger.warning(getString(R.string.log_wifi_lost))
-                    } catch (e: Exception) {
-                        DebugLogger.error("❌ Error unbinding network: ${e.message}")
-                    }
-                }
-            }
-
-            wifiNetworkCallback = callback
-            connectivityManager.requestNetwork(request, callback)
-            DebugLogger.info(getString(R.string.log_searching_wifi))
-        } catch (e: Exception) {
-            DebugLogger.error("❌ bindToWifiNetwork error: ${e.message}")
-        }
-    }
-
-    private fun unbindFromWifiNetwork() {
-        try {
-            val callback = wifiNetworkCallback
-            if (callback != null) {
-                val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                connectivityManager.unregisterNetworkCallback(callback)
-                wifiNetworkCallback = null
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                connectivityManager.bindProcessToNetwork(null)
-            } else {
-                @Suppress("DEPRECATION")
-                ConnectivityManager.setProcessDefaultNetwork(null)
-            }
-            DebugLogger.info(getString(R.string.log_wifi_unbound))
-        } catch (e: Exception) {
-            DebugLogger.error("❌ unbindFromWifiNetwork error: ${e.message}")
-        }
-    }
-
-    // ─── Notification ────────────────────────────────────────────
-
-    private fun buildNotif(status: String): Notification {
-        val stopPi = PendingIntent.getService(
-            this, 0,
-            Intent(this, MirrorService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("🏍️ " + getString(R.string.app_name))
-            .setContentText(status)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .addAction(android.R.drawable.ic_media_pause, getString(R.string.notif_action_stop), stopPi)
-            .setOngoing(true)
-            .build()
-    }
-
-    private fun updateNotif(status: String) {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIF_ID, buildNotif(status))
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val ch = NotificationChannel(
-                CHANNEL_ID, getString(R.string.notif_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply { description = getString(R.string.notif_channel_description) }
-            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                .createNotificationChannel(ch)
-        }
-    }
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private fun getOrAutoSelectBtMac(): String {
-        val prefs = getSharedPreferences("kove_prefs", MODE_PRIVATE)
-        var savedMac = prefs.getString("bt_mac", "")
-        if (savedMac.isNullOrEmpty()) {
-            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-            if (adapter != null && adapter.isEnabled) {
-                try {
-                    val bonded = adapter.bondedDevices
-                    val cqkyDev = bonded?.firstOrNull { dev ->
-                        val name = dev.name ?: ""
-                        val mac = dev.address ?: ""
-                        name.startsWith("CQKY", ignoreCase = true) ||
-                        mac.startsWith("CQKY", ignoreCase = true) ||
-                        name.contains("CQKY", ignoreCase = true)
-                    }
-                    if (cqkyDev != null) {
-                        savedMac = cqkyDev.address
-                        prefs.edit().putString("bt_mac", savedMac).apply()
-                        DebugLogger.info("🏍️ Auto-selected Kove Bluetooth device: ${cqkyDev.name ?: savedMac} (${cqkyDev.address})")
-                    }
-                } catch (_: SecurityException) {}
-            }
-        }
-        return savedMac ?: ""
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 }
