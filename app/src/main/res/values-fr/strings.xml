@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Details -->
+    <string name="app_name">KoveMirror</string>
+    <string name="header_subtitle">Recopie d\'écran intégrale TFT Kove</string>
+    <!-- Language Selection -->
+    <string name="label_language">🌐 Langue de l\'application :</string>
+    <!-- UI Labels -->
+    <string name="label_select_bt_device">Sélectionner l\'appareil Bluetooth TFT</string>
+    <string name="label_ip_address_listening">📱 IP téléphone (écoute sur port 17818) :</string>
+    <string name="label_tft_target_address">↑ Adresse de connexion pour le TFT</string>
+    <string name="label_bt_device_trigger">🔵 Appareil Bluetooth TFT (pour activer le Wi-Fi) :</string>
+    <string name="label_bt_device_subtext">Sélectionnez l\'écran TFT de votre moto parmi les appareils associés</string>
+    <string name="label_resolution_padding_settings">🖥️ Paramètres de résolution et de marges TFT :</string>
+    <string name="label_resolution">Résolution : </string>
+    <string name="label_padding">Marge (Haut/Bas) : </string>
+    <string name="label_debug_log">📋 Journal de débogage</string>
+    <string name="label_debug_terminal">Terminal de débogage</string>
+    <string name="label_log_legend">🟢Succès  🔴Erreur  🟠Avertissement  🔵Données  🟣💓Heartbeat  ⚪Info</string>
+    <!-- Display Modes -->
+    <string name="label_display_mode">📺 Mode d\'affichage :</string>
+    <string name="label_tft_resolution">🖥️ Modèle TFT / Résolution :</string>
+    <string name="mode_center_crop">🟢 Recadrage centré (Plein écran)</string>
+    <string name="mode_fit">🔵 Ajuster (Bordures)</string>
+    <string name="mode_stretch">🟠 Étirer</string>
+    <!-- Presets -->
+    <string name="preset_600x1024">600×1024 (Kove 800X / Pro)</string>
+    <string name="preset_480x800">480×800 (Portrait Petit)</string>
+    <string name="preset_640x1284">640×1284 (Portrait Grand)</string>
+    <string name="preset_1280x720">1280×720 (Paysage)</string>
+    <string name="preset_800x800">800×800 (Carré)</string>
+    <!-- WiFi States -->
+    <string name="wifi_waiting">En attente du Wi-Fi...</string>
+    <string name="wifi_gateway">Passerelle : --</string>
+    <string name="wifi_not_connected_status">⚠️ Wi-Fi non connecté</string>
+    <string name="wifi_connected_status">✅ Wi-Fi : %1$s</string>
+    <string name="wifi_gateway_tbox">🏍️ Passerelle (TBox) : %1$s</string>
+    <string name="wifi_required_toast">⚠️ Veuillez d\'abord vous connecter au Wi-Fi de la moto</string>
+    <!-- BT States / Spinner Options -->
+    <string name="bt_not_supported">Bluetooth non pris en charge</string>
+    <string name="bt_off">Bluetooth désactivé</string>
+    <string name="bt_permission_missing">Autorisation manquante</string>
+    <string name="bt_no_paired_devices">Aucun appareil associé</string>
+    <string name="status_connecting">Connexion en cours...</string>
+    <!-- Status Messages -->
+    <string name="status_ready">⏸ Prêt</string>
+    <string name="status_stream_active">🔴 Flux actif</string>
+    <string name="status_stopped">⏹ Arrêté</string>
+    <!-- Resolution Info -->
+    <string name="res_info_default">Portrait 600×1024 (forme=6) — Format portrait standard Kove TFT</string>
+    <string name="res_info_format">Cible : %1$d×%2$d | Marge : %3$dpx</string>
+    <!-- Button Actions -->
+    <string name="btn_start_mirroring">▶  Démarrer la recopie</string>
+    <string name="btn_stop_mirroring">⏹  Arrêter</string>
+    <string name="btn_share_logs">Partager les logs</string>
+    <string name="btn_ok">Compris</string>
+    <!-- Security Warning -->
+    <string name="security_warning_title">Avertissement de sécurité</string>
+    <string name="security_warning_msg">Root ou Débogueur détecté sur votre appareil. Cela peut affecter la sécurité de l\'application. Vous pouvez continuer, mais les vérifications d\'intégrité seront plus fréquentes.</string>
+    <!-- File Sharing & Toast -->
+    <string name="log_file_not_found">Fichier de log introuvable</string>
+    <string name="share_logs_title">Partager les journaux</string>
+    <string name="log_share_error">Erreur lors du partage du journal : %1$s</string>
+    <!-- Log Messages (UI & Activity) -->
+    <string name="log_crash_detected">🔥 CRASH DÉTECTÉ SUR L\'APPAREIL :</string>
+    <string name="log_app_started">🏍️ KoveMirror v2.0 démarré</string>
+    <string name="log_step_1">1. Connectez-vous au Wi-Fi de la moto</string>
+    <string name="log_step_2">2. L\'IP du téléphone apparaîtra ci-dessus</string>
+    <string name="log_step_3">3. Appuyez sur le bouton \'Démarrer\'</string>
+    <string name="log_step_4">4. Le journal se remplira dès que le TFT sera connecté</string>
+    <string name="log_wifi_not_connected">⚠️ Wi-Fi non connecté — connectez-vous au point d\'accès de la moto</string>
+    <string name="log_phone_ip">📡 IP Téléphone : %1$s</string>
+    <string name="log_gateway">🏍️ Passerelle   : %1$s</string>
+    <string name="log_target_resolution">🖥️ Résolution cible TFT : %1$d×%2$d | Marge : %3$dpx</string>
+    <string name="log_request_screen_capture">🔐 Demande d\'autorisation de capture d\'écran...</string>
+    <string name="log_permission_granted">✅ Autorisation accordée — lancement de MirrorService</string>
+    <string name="log_service_start_failed">❌ Échec du démarrage du service : %1$s</string>
+    <string name="log_screen_capture_denied">❌ Autorisation de capture d\'écran refusée</string>
+    <string name="log_stopped_by_user">⏹️ Arrêté par l\'utilisateur</string>
+    <string name="log_bt_permissions_missing">⚠️ Autorisations Bluetooth manquantes, impossible de lister les appareils</string>
+    <string name="log_selected_bt">🔗 Bluetooth sélectionné : %1$s (%2$s)</string>
+    <string name="log_bt_permissions_granted">✅ Autorisations Bluetooth accordées</string>
+    <string name="log_bt_permissions_denied">⚠️ Certaines autorisations Bluetooth ont été refusées</string>
+    <string name="log_padding_updated_on_the_fly">🔄 Marge mise à jour dynamiquement : %1$dpx</string>
+    <!-- Notification & Service -->
+    <string name="notif_waiting_tft">⏳ En attente de connexion du TFT...</string>
+    <string name="notif_tft_connected">🔴 TFT connecté — Flux en cours</string>
+    <string name="notif_waiting_tft_port">🟡 En attente du TFT (port %1$d)</string>
+    <string name="notif_action_stop">Arrêter</string>
+    <string name="notif_channel_name">Recopie KoveMirror</string>
+    <string name="notif_channel_description">Service de recopie d\'écran sur compteur TFT Kove</string>
+    <!-- MirrorService Logs -->
+    <string name="log_mirroring_starting">▶️ Démarrage de la recopie...</string>
+    <string name="log_bt_mac_not_selected">⚠️ Adresse MAC Bluetooth non sélectionnée, déclencheur BLE inactif</string>
+    <string name="log_searching_wifi">📡 Recherche du réseau Wi-Fi et liaison du processus...</string>
+    <string name="log_wifi_bound_process">🔗 Processus de l\'application lié au réseau Wi-Fi avec succès (bindProcessToNetwork)</string>
+    <string name="log_wifi_bound_process_legacy">🔗 Processus de l\'application lié au réseau Wi-Fi avec succès (setProcessDefaultNetwork)</string>
+    <string name="log_wifi_lost">🔌 Connexion Wi-Fi perdue, déliaison du réseau</string>
+    <string name="log_wifi_unbound">🔌 Liaison du réseau Wi-Fi effacée</string>
+    <string name="log_tft_video_connected">🚀 Vidéo TFT connectée, démarrage de l\'encodeur...</string>
+    <string name="log_tft_disconnected_waiting">🔌 TFT déconnecté — en attente de reconexion...</string>
+    <string name="log_stopping_mirroring">⏹️ Arrêt de la recopie...</string>
+    <string name="log_all_stopped">⏹️ Tout est arrêté</string>
+    <!-- HeartbeatManager Logs -->
+    <string name="log_hb_started">💓 Thread Heartbeat démarré (intervalle 2s)</string>
+    <string name="log_hb_sent">💓 Heartbeat #%1$d → %2$s</string>
+    <string name="log_hb_io_error">❌ Erreur E/S Heartbeat : %1$s</string>
+    <string name="log_hb_stopped">💓 Thread Heartbeat arrêté (total : %1$d)</string>
+    <!-- ProjectionEncoder Logs -->
+    <string name="log_encoder_starting">🎬 Démarrage de ProjectionEncoder...</string>
+    <string name="log_codec_output_res">   Résolution de sortie du codec : %1$d×%2$d</string>
+    <string name="log_codec_ready">✅ MediaCodec prêt</string>
+    <string name="log_vd_creating">🖥️ Création du VirtualDisplay...</string>
+    <string name="log_vd_ready">✅ VirtualDisplay prêt (mode %1$s)</string>
+    <string name="log_encoder_init_error">❌ Erreur initialisation encodeur : %1$s</string>
+    <string name="log_codec_not_init">❌ Codec non initialisé - init() a-t-il été appelé ?</string>
+    <string name="log_encoding_loop_started">🎬 Boucle d\'encodage H.264 démarrée</string>
+    <string name="log_eos_received">🎬 Signal EOS reçu - encodage terminé</string>
+    <string name="log_encoding_error">❌ Erreur d\'encodage : %1$s</string>
+    <string name="log_encoding_loop_finished">🎬 Boucle d\'encodage terminée (%1$d images)</string>
+    <string name="log_encoder_stopped">🎬 ProjectionEncoder arrêté</string>
+    <string name="log_vd_recreating">🔄 Recréation du VirtualDisplay... (Nouvelle marge : %1$dpx, Rés : %2$d×%3$d)</string>
+    <!-- TcpServer Logs -->
+    <string name="log_tcp_all_closed">🔌 Tous les serveurs de ports TCP sont fermés</string>
+    <string name="log_write_data_error">❌ Erreur writeData (Vidéo) : %1$s</string>
+    <string name="log_video_socket_opened">✅ ServerSocket Vidéo ouvert → PORT %1$d</string>
+    <string name="log_tft_video_connected_ip">🔌 Vidéo/Projection TFT connectée ! → %1$s:%2$d</string>
+    <string name="log_video_accept_error">❌ Erreur accept Vidéo : %1$s</string>
+    <string name="log_video_bind_error">❌ Erreur de liaison ServerSocket Vidéo (Port %1$d) : %2$s</string>
+    <string name="log_tft_video_conn_lost">🔌 Connexion Vidéo TFT perdue</string>
+    <string name="log_control_socket_opened">✅ ServerSocket Contrôle ouvert → PORT %1$d</string>
+    <string name="log_tft_control_connected_ip">🔌 Contrôle TFT connecté ! → %1$s:%2$d</string>
+    <string name="log_control_bind_error">❌ Erreur de liaison ServerSocket Contrôle (Port %1$d) : %2$s</string>
+    <string name="log_sending_tuc_query">📤 Envoi de la requête TUC GET au TFT...</string>
+    <string name="log_control_handshake_done">✅ Poignée de main de contrôle réussie !</string>
+    <string name="log_tft_control_conn_lost">🔌 Connexion Contrôle TFT perdue</string>
+    <string name="log_binary_handshake_sent">📤 Paquets binaires de handshake envoyés sur le port de contrôle</string>
+    <string name="log_hb_socket_opened">✅ ServerSocket Heartbeat ouvert → PORT %1$d</string>
+    <string name="log_tft_dedicated_hb_connected">🔌 TFT Heartbeat dédié connecté ! → %1$s:%2$d</string>
+    <string name="log_dedicated_hb_started">💓 Envoi du Heartbeat dédié démarré (15457, intervalle 200ms)</string>
+    <string name="log_dedicated_hb_stopped">⚠️ Envoi du Heartbeat dédié arrêté : %1$s</string>
+    <!-- BleManager Logs -->
+    <string name="log_ble_conn_starting">🔵 Démarrage de la connexion BLE : %1$s</string>
+    <string name="log_ble_not_supported">❌ Bluetooth non supporté</string>
+    <string name="log_ble_invalid_mac">❌ Adresse MAC invalide : %1$s</string>
+    <string name="log_ble_disconnected">🔴 Connexion Bluetooth BLE déconnectée</string>
+    <!-- Map & Route Feature -->
+    <string name="btn_open_map">🗺️  Carte &amp; Itinéraire</string>
+    <string name="map_title">🗺️ Carte &amp; Suivi d\'itinéraire</string>
+    <string name="map_layer_maps">🗺️ Carte OSM</string>
+    <string name="map_layer_topo">🏔️ OpenTopo</string>
+    <string name="map_layer_sat">🛰️ Satellite Esri</string>
+    <string name="map_layer_google_maps">🗺️ Google Maps</string>
+    <string name="map_layer_google_sat">🛰️ Google Satellite</string>
+    <string name="map_layer_google_hybrid">🛰️ Google Hybride</string>
+    <string name="map_layer_offline">📂 Carte hors-ligne (.map)</string>
+    <string name="map_layer_3d">3D</string>
+    <string name="map_3d_offline">⬇️ Hors-ligne</string>
+    <string name="map_3d_loading">🌍 Chargement de la carte 3D…</string>
+    <string name="toast_select_offline_map">Veuillez sélectionner un fichier OpenAndroMaps (.map)</string>
+    <string name="toast_offline_map_loaded">✅ Carte hors-ligne chargée : %1$s</string>
+    <string name="error_invalid_map_file">❌ Fichier .map invalide ou illisible</string>
+    <string name="map_label_scale_title">🔤 Taille du texte et des étiquettes</string>
+    <string name="map_layer_osm">🗺️ OSM</string>
+    <string name="map_layer_satellite">🛰️ Satellite</string>
+    <string name="map_btn_import">📂 Importer</string>
+    <string name="map_btn_routes">📋 Tracés</string>
+    <string name="map_btn_gps">📍 GPS</string>
+    <string name="map_btn_gps_on">📍 GPS ACTIF</string>
+    <string name="map_btn_back">Retour</string>
+    <string name="map_btn_close">Fermer</string>
+    <string name="map_btn_favorites">⭐ Favoris</string>
+    <string name="btn_add_favorite">⭐ Favori</string>
+    <string name="dialog_favorites_title">⭐ Favoris &amp; Recherche</string>
+    <string name="search_address_hint">Rechercher une adresse ou un lieu...</string>
+    <string name="btn_search">Rechercher</string>
+    <string name="label_saved_favorites">Favoris enregistrés</string>
+    <string name="label_search_results">Résultats de recherche</string>
+    <string name="toast_favorite_saved">✅ Favori enregistré : %1$s</string>
+    <string name="toast_favorite_deleted">🗑️ Favori supprimé</string>
+    <string name="dialog_save_fav_title">Enregistrer le lieu en favori</string>
+    <string name="dialog_save_fav_prompt">Entrez un nom pour ce lieu :</string>
+    <string name="no_favorites_yet">Aucun favori enregistré pour le moment</string>
+    <string name="no_results_found">Aucun résultat trouvé</string>
+    <string name="map_btn_cancel">Annuler</string>
+    <string name="map_btn_apply">Appliquer</string>
+    <string name="map_loaded_routes">Tracés chargés</string>
+    <string name="map_route_style_title">Style de tracé</string>
+    <string name="map_route_color">Couleur :</string>
+    <string name="map_route_width">Épaisseur :</string>
+    <string name="map_route_preview">Aperçu :</string>
+    <string name="map_route_toggle_visibility">Afficher / Masquer</string>
+    <string name="map_route_delete">Supprimer le tracé</string>
+    <string name="btn_clear_all_imported">🗑️ Tout effacer</string>
+    <string name="map_import_success">✅ %1$d tracé(s) importé(s)</string>
+    <string name="map_import_no_routes">⚠️ Aucun tracé trouvé dans le fichier</string>
+    <string name="map_import_unsupported_format">⚠️ Format de fichier non pris en charge (%1$s). Veuillez choisir un fichier .gpx, .kml ou .kmz.</string>
+    <string name="map_import_error">❌ Erreur d\'importation : %1$s</string>
+    <string name="map_gps_permission_denied">⚠️ Autorisation de localisation refusée</string>
+    <string name="map_waiting_gps">📍 En attente du signal GPS…</string>
+    <!-- Map & Cursor Customization -->
+    <string name="map_settings_dialog_title">⚙️ Paramètres Carte &amp; Curseur</string>
+    <string name="map_route_settings_title">⚙️ Paramètres Tracé &amp; Marqueurs</string>
+    <string name="map_route_line_color">🎨 Couleur du tracé :</string>
+    <string name="map_route_line_width_format">Épaisseur : %1$dpx</string>
+    <string name="map_route_show_arrows">⬆️ Afficher les flèches de direction</string>
+    <string name="map_route_arrow_color">Couleur des flèches :</string>
+    <string name="map_route_show_distance">📍 Afficher les bornes kilométriques (km)</string>
+    <string name="map_route_distance_interval">Intervalle des bornes :</string>
+    <string name="map_route_reversed_toast">🔄 Sens de %1$s inversé</string>
+    <string name="map_route_reverse_btn">Inverser le sens</string>
+    <string name="color_red">🔴 Rouge</string>
+    <string name="color_orange">🟠 Orange</string>
+    <string name="color_yellow">🟡 Jaune</string>
+    <string name="color_green">🟢 Vert</string>
+    <string name="color_blue">🔵 Bleu</string>
+    <string name="color_purple">🟣 Violet</string>
+    <string name="color_pink">🩷 Rose</string>
+    <string name="color_white">⚪ Blanc</string>
+    <string name="color_cyan">🩵 Cyan</string>
+    <string name="color_lime">🍏 Citron vert</string>
+    <string name="label_map_theme">Thème de la carte :</string>
+    <string name="map_theme_day">☀️ Jour</string>
+    <string name="map_theme_night">🌙 Nuit</string>
+    <string name="map_theme_auto">🌗 Auto</string>
+    <string name="label_cursor_shape">Forme du curseur de position :</string>
+    <string name="label_cursor_color">Couleur du curseur :</string>
+    <string name="label_cursor_preview">Aperçu du curseur :</string>
+    <string name="label_recording_color">Couleur d\'enregistrement du tracé :</string>
+    <string name="btn_open_tft_padding">🖼️ Paramètres de marges</string>
+    <string name="cursor_shape_arrow">⬆️ Flèche de navigation</string>
+    <string name="cursor_shape_motorcycle">🏍️ Moto</string>
+    <string name="cursor_shape_circle">🟢 Point circulaire</string>
+    <string name="cursor_shape_crosshair">🎯 Viseur cible</string>
+    <string name="cursor_shape_pin">📍 Épingle de localisation</string>
+    <!-- GPX Track Recording -->
+    <string name="map_btn_record_start">🔴 Enregistrer</string>
+    <string name="gpx_export_title">💾 Enregistrer le tracé GPX</string>
+    <string name="label_gpx_filename">Nom du fichier :</string>
+    <string name="label_gpx_line_color">Couleur du tracé :</string>
+    <string name="btn_gpx_save">💾 Enregistrer le GPX</string>
+    <string name="btn_gpx_discard">Ignorer</string>
+    <string name="toast_gpx_saved">✅ Tracé GPX enregistré dans Téléchargements : %1$s</string>
+    <string name="dialog_exit_recording_title">⚠️ Enregistrement en cours</string>
+    <string name="dialog_exit_recording_msg">L\'enregistrement du tracé est actif. Voulez-vous l\'arrêter et l\'enregistrer ?</string>
+    <string name="btn_stop_and_save">Arrêter &amp; Enregistrer</string>
+    <string name="btn_keep_recording">Continuer l\'enregistrement</string>
+    <!-- Turn-by-Turn Navigation -->
+    <string name="nav_start_navigation">▶ Démarrer la navigation</string>
+    <string name="nav_route_options">⚙️ Options</string>
+    <string name="nav_avoid_tolls">Éviter les péages (Sans péage)</string>
+    <string name="nav_toll_roads_toggle">🛣️ Routes à péage</string>
+    <string name="nav_avoid_highways">Éviter les autoroutes (Sans autoroute)</string>
+    <string name="nav_route_preference">Préférence d\'itinéraire :</string>
+    <string name="nav_type_fastest">⚡ Le plus rapide</string>
+    <string name="nav_type_shortest">📏 Le plus court</string>
+    <string name="nav_stop">Arrêter</string>
+    <string name="nav_destination_selected">📍 Destination sélectionnée</string>
+    <string name="nav_arrived">🎉 Vous êtes arrivé à destination !</string>
+    <string name="nav_calculating">Calcul de l\'itinéraire…</string>
+    <string name="nav_recalculating">Recalcul de l\'itinéraire…</string>
+    <string name="nav_rem_format">Restant : %1$s (%2$.1f km)</string>
+    <string name="label_initial_total_time">Total : %1$s</string>
+    <string name="label_remaining_time">Restant : %1$s (%2$.1f km)</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_minutes">min</string>
+    <string name="duration_format_hours_mins">%1$d %2$s %3$d %4$s</string>
+    <string name="duration_format_mins">%1$d %2$s</string>
+    <!-- App Mode Selection -->
+    <string name="label_app_mode">🎮 Mode de l\'application :</string>
+    <string name="mode_mirroring">📺 Recopie d\'écran</string>
+    <string name="mode_virtual_display">🖥️ Recopie par écran virtuel</string>
+    <string name="mode_control_only">🎮 Contrôle guidon seul</string>
+    <string name="label_select_target_app">📱 Application à lancer sur l\'écran virtuel :</string>
+    <string name="option_internal_map">🗺️ Carte &amp; Tableau de bord KoveMirror intégrés</string>
+    <string name="btn_select_language">🌐 Langue : %1$s</string>
+    <string name="btn_select_bt_device">📶 Bluetooth : %1$s</string>
+    <string name="bt_device_none">Non sélectionné</string>
+    <!-- Control Only Mode -->
+    <string name="btn_start_controller">▶  Activer commandes</string>
+    <string name="btn_stop_controller">⏹  Désactiver commandes</string>
+    <string name="status_control_active">🎮 Commandes au guidon actives</string>
+    <string name="notif_control_only_active">🎮 Commandes au guidon actives</string>
+    <!-- Permission Buttons -->
+    <string name="btn_overlay_permission">⚠️ Autoriser la superposition</string>
+    <string name="btn_overlay_granted">✅ Superposition OK</string>
+    <string name="btn_accessibility_permission">⚠️ Activer l\'accessibilité</string>
+    <string name="btn_accessibility_granted">✅ Accessibilité OK</string>
+    <string name="permission_required_title">Autorisation requise</string>
+    <string name="overlay_permission_required_msg">L\'autorisation de superposition est requise pour afficher le menu des commandes au guidon par-dessus vos autres applications (Waze, Maps). Veuillez accorder l\'autorisation \'Afficher sur les autres applis\'.</string>
+    <string name="btn_grant_permission">Accorder l\'autorisation</string>
+    <string name="toast_enable_accessibility">Veuillez activer \'Contrôleur de guidon KoveMirror\' dans les paramètres d\'Accessibilité</string>
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">Le contrôleur de guidon KoveMirror permet aux boutons de votre moto de piloter les applications de votre smartphone (zoom, défilement de carte, médias, volume, changement d\'app).</string>
+    <!-- Handlebar Mode Names -->
+    <string name="handlebar_mode_title">🎮 Mode Guidon</string>
+    <string name="handlebar_mode_my_location">Recentrer sur ma position [ENT]</string>
+    <string name="handlebar_mode_toggle_3d">Basculer Carte 3D / 2D [ENT]</string>
+    <string name="handlebar_mode_zoom">Zoom Avant / Zoom Arrière</string>
+    <string name="handlebar_mode_pan_vertical">Défilement Haut / Bas</string>
+    <string name="handlebar_mode_pan_horizontal">Défilement Gauche / Droite</string>
+    <string name="handlebar_mode_media_track">Piste suivante / Piste précédente</string>
+    <string name="handlebar_mode_volume">Volume + / Volume -</string>
+    <string name="handlebar_mode_play">Lecture [ENT]</string>
+    <string name="handlebar_mode_pause">Pause [ENT]</string>
+    <string name="handlebar_mode_relaunch_stream">🔄 Relancer le Stream TFT [ENT]</string>
+    <string name="handlebar_mode_app_switch">App suivante / App précédente</string>
+    <!-- Handlebar Toasts -->
+    <string name="toast_handlebar_mode_assigned">✅ Mode Guidon : %1$s</string>
+    <string name="toast_my_location">📍 Retour à ma position</string>
+    <!-- TFT Frame Fit Dialog -->
+    <string name="btn_tft_fit">Réglage des marges</string>
+    <string name="btn_tft_padding_settings">📺 Réglage des bandes noires / marges TFT</string>
+    <string name="tft_fit_dialog_title">📺 Ajustement du cadre d\'écran TFT</string>
+    <string name="tft_fit_dialog_description">Ajustez la hauteur des bandes noires en haut et en bas pour aligner parfaitement la carte avec l\'écran TFT de votre moto :</string>
+    <string name="tft_fit_top_label">Bande noire supérieure : %1$d dp</string>
+    <string name="tft_fit_bottom_label">Bande noire inférieure : %1$d dp</string>
+    <string name="tft_fit_reset">Réinitialiser</string>
+    <string name="btn_cancel">Annuler</string>
+    <string name="tft_fit_save">Enregistrer &amp; Fermer</string>
+    <string name="toast_tft_fit_saved">✅ Ajustement du cadre TFT enregistré</string>
+    <!-- About & Debug Toggle -->
+    <string name="btn_about">ℹ️ À propos</string>
+    <string name="about_dialog_title">À propos de KoveMirror</string>
+    <string name="about_developer_credit">Conçu et développé par H. Nakturk</string>
+    <string name="btn_toggle_debug_show">📋 Afficher le terminal de débogage</string>
+    <string name="btn_toggle_debug_hide">📋 Masquer le terminal de débogage</string>
+    <!-- Screen Dim (Energy Save) -->
+    <string name="btn_screen_dim_off">🔆 Écran : Normal</string>
+    <string name="btn_screen_dim_on">🌑 Écran : Atténué (Éco)</string>
+    <string name="toast_screen_dimmed">🌑 Écran atténué pour économiser la batterie. La recopie continue.</string>
+    <string name="toast_screen_bright">🔆 Luminosité normale de l\'écran rétablie.</string>
+    <!-- Route Weather -->
+    <string name="toast_route_weather_on">🌤️ Météo sur l\'itinéraire activée</string>
+    <string name="toast_route_weather_off">🌤️ Météo sur l\'itinéraire désactivée</string>
+    <string name="weather_temperature">🌡️ Température : %1$.1f°C</string>
+    <string name="weather_precipitation_prob">💧 Risque de pluie : %1$d%% (%2$.1f mm)</string>
+    <string name="weather_wind">💨 Vent : %1$.1f km/h</string>
+    <string name="weather_distance_from_start">📍 Depuis le départ : %1$.1f km</string>
+    <!-- Sharp Curve Warnings -->
+    <string name="label_curve_warnings_section">🏍️ Alertes virages serrés &amp; épingles</string>
+    <string name="label_curve_warnings_title">Marqueurs de virages serrés &amp; épingles</string>
+    <string name="label_curve_warnings_desc">Badges de virages avec code couleur directement sur la carte</string>
+    <string name="curve_hairpin">Épingle à cheveux / Demi-tour</string>
+    <string name="curve_sharp_left">Virage serré à gauche</string>
+    <string name="curve_sharp_right">Virage serré à droite</string>
+    <string name="curve_medium_left">Courbe moyenne à gauche</string>
+    <string name="curve_medium_right">Courbe moyenne à droite</string>
+    <string name="curve_turn_angle">📐 Angle de virage : %1$d°</string>
+    <!-- Modern Settings UI -->
+    <string name="label_live_preview">APERÇU EN DIRECT CARTE &amp; CURSEUR</string>
+    <string name="label_driving_features">🛡️ Conduite &amp; Sécurité</string>
+    <string name="label_route_weather_title">Prévisions météo sur l\'itinéraire</string>
+    <string name="label_route_weather_desc">Badges de température et précipitations le long du tracé</string>
+    <string name="label_tft_settings_title">📺 Marges de l\'affichage TFT</string>
+    <string name="label_tft_settings_desc">Ajuster les bandes noires haut &amp; bas pour l\'écran TFT de la moto</string>
+    <string name="btn_save_settings">💾 Enregistrer &amp; Appliquer</string>
+</resources>
